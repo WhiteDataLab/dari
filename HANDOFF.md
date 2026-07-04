@@ -2,6 +2,21 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-04 (저녁) — 첫 가입 버그 수정 + 노출 회피 기능 (배포 완료)
+
+### 완료
+- **버그 수정**: 첫 회원(운영자)인데 가입 화면이 추천코드를 강제 → 회원 0명이면 `GET /api/signup`의 `needsReferral=false`로 코드 단계 자동 건너뜀. **프로덕션(dari-five.vercel.app) 배포·확인 완료**
+- **같은 회사 상호 비노출**: `Profile.avoidSameCompany` (기본 ON, 프로필 폼 체크박스 + MY>아는 사람 피하기 토글). 회사명 정규화(소문자/공백/"(주)" 제거) 비교, 한쪽이라도 ON이면 피드·상세(404)·호감(404)에서 상호 숨김. `src/lib/visibility.ts`
+- **아는 사람 피하기**: `/me/avoid`에서 번호 등록(최대 200개) → HMAC-SHA256 해시만 저장(`ContactBlock`, 원본 미보관, 라벨 010-****-1234). `User.phoneHash`/`Profile.phoneHash`와 매칭해 **상호 비노출**. 대리 등록 당사자(비회원) 차단 목록은 TODO(phase-2)
+- migration `1_avoidance` 프로덕션 적용 완료. 스펙 §7.3 추가
+- E2E #2: 10/11 통과 (1건은 테스트 순서 이슈 — 호감 차단 검사 전에 사진 미등록 400이 먼저 걸림. 차단 로직 자체는 상세 404로 동일 함수 검증됨). 테스트 데이터 정리 완료
+
+### 트러블슈팅
+- **P3005**: 첫 `migrate deploy`가 테이블은 만들었는데 `_prisma_migrations` 기록이 없었음 → `prisma migrate resolve --applied 0_init`으로 baseline 후 deploy 정상화
+- 새 마이그레이션 생성은 shadow DB가 없어 `prisma migrate diff --from-url <라이브DB> --to-schema-datamodel --script` 방식 사용
+
+---
+
 ## 2026-07-04 (오후) — 키 반영 · DB 구축 · E2E 통과
 
 ### 완료
