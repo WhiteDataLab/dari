@@ -59,21 +59,26 @@ export async function GET(
 
   // 성사된 사이면 전화번호 포함 (유일한 복호화 경로 ②)
   let phone: string | null = null;
-  if (isMine) {
-    phone = decryptPhone(profile.phone);
-  } else if (myProfileIds.length > 0) {
-    const match = await prisma.match.findFirst({
-      where: {
-        OR: [
-          { profileAId: { in: myProfileIds }, profileBId: id },
-          { profileAId: id, profileBId: { in: myProfileIds } },
-        ],
-      },
-    });
-    if (match) phone = decryptPhone(profile.phone);
+  try {
+    if (isMine) {
+      phone = decryptPhone(profile.phone);
+    } else if (myProfileIds.length > 0) {
+      const match = await prisma.match.findFirst({
+        where: {
+          OR: [
+            { profileAId: { in: myProfileIds }, profileBId: id },
+            { profileAId: id, profileBId: { in: myProfileIds } },
+          ],
+        },
+      });
+      if (match) phone = decryptPhone(profile.phone);
+    }
+  } catch {
+    phone = null; // 키 불일치 등 복호화 실패 시 미공개로 처리
   }
 
-  const { phone: _encrypted, ...rest } = profile;
+  // 민감 필드는 응답에서 제외 (phone 암호문, phoneHash)
+  const { phone: _encrypted, phoneHash: _hash, ...rest } = profile;
   return NextResponse.json({
     profile: {
       ...rest,

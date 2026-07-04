@@ -85,7 +85,11 @@ export default function SignupPage() {
   async function checkReferral() {
     setLoading(true);
     setError("");
-    const { ok, data } = await post("/api/auth/referral/check", { code: referralCode });
+    const { ok, data } = await post("/api/auth/referral/check", {
+      code: referralCode,
+      email,
+      verifyCode: code,
+    });
     setLoading(false);
     if (!ok) return setError(data.error ?? "추천코드 확인 실패");
     setReferrerName(data.referrerName);

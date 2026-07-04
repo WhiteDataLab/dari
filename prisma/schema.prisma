@@ -99,6 +99,7 @@ model EmailVerification {
   code      String // 6자리
   expiresAt DateTime // 발급 후 10분
   usedAt    DateTime?
+  attempts  Int       @default(0) // 검증 실패 횟수 — 5회 초과 시 무효화 (무차별 대입 방지)
   createdAt DateTime  @default(now())
 
   @@index([email, code])

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { encryptPhone, generateReferralCode, hashPhone } from "@/lib/crypto";
+import { verifyEmailCode } from "@/lib/emailCode";
 import { RelationType } from "@prisma/client";
 
 // GET /api/signup — 첫 회원(운영자)인지 여부. 첫 회원은 추천코드 단계를 건너뛴다
@@ -34,11 +35,8 @@ export async function POST(req: Request) {
   const email = data.email.toLowerCase().trim();
 
   // 이메일 인증 재검증 (서버 사이드)
-  const verification = await prisma.emailVerification.findFirst({
-    where: { email, code: data.code, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!verification) {
+  const verification = await verifyEmailCode(email, data.code, { consume: false });
+  if (!verification.ok) {
     return NextResponse.json({ error: "이메일 인증이 만료됐어요. 처음부터 다시 진행해 주세요" }, { status: 400 });
   }
 
@@ -66,23 +64,27 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
-  const user = await prisma.user.create({
-    data: {
-      email,
-      emailVerifiedAt: now,
-      name: data.name.trim(),
-      phone: encryptPhone(data.phone.replace(/-/g, "")),
-      phoneHash: hashPhone(data.phone),
-      birthDate: new Date(data.birthDate),
-      company: data.company.trim(),
-      referralCode: generateReferralCode(),
-      referredById,
-      relationToReferrer: isFirstUser ? null : data.relationToReferrer,
-      allowNameInPath: data.allowNameInPath,
-      agreedTermsAt: now,
-      agreedPrivacyAt: now,
-      role: isFirstUser ? "ADMIN" : "MEMBER",
-    },
+  // 트랜잭션 안에서 재확인 — 동시 가입으로 ADMIN이 2명 생기는 레이스 방지
+  const user = await prisma.$transaction(async (tx) => {
+    const countInTx = await tx.user.count();
+    return tx.user.create({
+      data: {
+        email,
+        emailVerifiedAt: now,
+        name: data.name.trim(),
+        phone: encryptPhone(data.phone.replace(/-/g, "")),
+        phoneHash: hashPhone(data.phone),
+        birthDate: new Date(data.birthDate),
+        company: data.company.trim(),
+        referralCode: generateReferralCode(),
+        referredById,
+        relationToReferrer: isFirstUser ? null : data.relationToReferrer,
+        allowNameInPath: data.allowNameInPath,
+        agreedTermsAt: now,
+        agreedPrivacyAt: now,
+        role: countInTx === 0 ? "ADMIN" : "MEMBER",
+      },
+    });
   });
 
   return NextResponse.json({ ok: true, userId: user.id });

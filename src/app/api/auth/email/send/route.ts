@@ -10,13 +10,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "이메일 형식을 확인해 주세요" }, { status: 400 });
   }
 
-  // 레이트 리밋: 같은 이메일 10분 내 3회
-  const recent = await prisma.emailVerification.count({
-    where: { email: normalized, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
-  });
-  if (recent >= 3) {
+  // 레이트 리밋: 같은 이메일 10분 내 3회 + 전역 1시간 30회 (메일 폭탄·SMTP 쿼터 보호)
+  const [recent, globalRecent] = await Promise.all([
+    prisma.emailVerification.count({
+      where: { email: normalized, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
+    }),
+    prisma.emailVerification.count({
+      where: { createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } },
+    }),
+  ]);
+  if (recent >= 3 || globalRecent >= 30) {
     return NextResponse.json(
-      { error: "요청이 너무 잦아요. 10분 후 다시 시도해 주세요" },
+      { error: "요청이 너무 잦아요. 잠시 후 다시 시도해 주세요" },
       { status: 429 },
     );
   }

@@ -19,6 +19,9 @@ export async function POST(req: Request) {
   if (file.size > 15 * 1024 * 1024) {
     return NextResponse.json({ error: "사진은 15MB 이하로 올려 주세요" }, { status: 400 });
   }
+  if (!file.type.startsWith("image/")) {
+    return NextResponse.json({ error: "이미지 파일만 올릴 수 있어요" }, { status: 400 });
+  }
 
   const profile = await prisma.profile.findUnique({
     where: { id: profileId },
@@ -32,7 +35,13 @@ export async function POST(req: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const result = await uploadProfilePhoto(buffer);
+  let result: Awaited<ReturnType<typeof uploadProfilePhoto>>;
+  try {
+    result = await uploadProfilePhoto(buffer);
+  } catch {
+    // sharp가 디코딩 못 하는 파일 (확장자 위장 등)
+    return NextResponse.json({ error: "이미지 파일을 읽을 수 없어요" }, { status: 400 });
+  }
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
