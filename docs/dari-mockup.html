@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>다리 — 지인의 지인, 어쩌면 인연</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --ivory:#FBF6EF; --surface:#FFFFFF; --ink:#1C1B18; --sub:#8B8578; --line:#EFE8DC;
+  --blue:#3182F6; --blue-tint:#EAF2FE;
+  --thread:#E8503A; --thread-soft:#FDEDEA;
+  --green:#22C55E; --green-tint:#E9F9EF;
+  --yellow:#FACC15; --yellow-tint:#FEF9E7;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --shadow:0 2px 12px rgba(28,27,24,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;
+  background:#EFE9DF; color:var(--ink); line-height:1.5;
+  letter-spacing:-0.01em;
+}
+button{font:inherit;border:0;background:none;cursor:pointer;color:inherit}
+
+/* ── 앱 셸 ── */
+#app{max-width:480px;margin:0 auto;min-height:100dvh;background:var(--ivory);
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 40px rgba(0,0,0,.08)}
+main{flex:1;overflow-y:auto;padding:0 20px calc(96px + env(safe-area-inset-bottom))}
+.screen{display:none;animation:fade .25s ease}
+.screen.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── 헤더 ── */
+header{padding:18px 20px 6px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:24px;font-weight:800;letter-spacing:-0.03em;position:relative;display:inline-block}
+.logo::after{content:"";position:absolute;left:0;right:-4px;bottom:1px;height:3px;
+  background:repeating-linear-gradient(90deg,var(--thread) 0 7px,transparent 7px 11px);
+  border-radius:2px}
+.persona{font-size:12px;font-weight:600;color:var(--sub);background:var(--surface);
+  border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+.persona b{color:var(--blue)}
+h2.page{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:14px 0 4px}
+p.pagesub{font-size:14px;color:var(--sub);margin-bottom:16px}
+
+/* ── 촌수 뱃지 & 칩 ── */
+.deg{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;
+  color:var(--thread);background:var(--thread-soft);border-radius:99px;padding:3px 8px}
+.deg::before{content:"";width:10px;height:2px;
+  background:repeating-linear-gradient(90deg,var(--thread) 0 3px,transparent 3px 5px)}
+.chip{display:inline-block;font-size:13px;font-weight:600;color:#5B554A;
+  background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 13px;margin:0 6px 8px 0}
+
+/* ── 홈: 피드 그리드 ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pcard{background:var(--surface);border-radius:var(--r-lg);overflow:hidden;
+  box-shadow:var(--shadow);text-align:left;transition:transform .12s ease}
+.pcard:active{transform:scale(.97)}
+.face{aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;font-size:56px;position:relative}
+.face small{position:absolute;top:10px;left:10px}
+.pcard .meta{padding:11px 13px 13px}
+.pcard .nm{font-size:16px;font-weight:800}
+.pcard .loc{font-size:12px;color:var(--sub);margin:1px 0 5px}
+.pcard .cmt{font-size:12px;color:#6E6759;background:var(--ivory);border-radius:8px;padding:6px 8px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── 프로필 상세 (오버레이) ── */
+#detail{position:absolute;inset:0;background:var(--ivory);z-index:40;display:none;
+  flex-direction:column;animation:up .28s cubic-bezier(.3,.9,.3,1)}
+#detail.on{display:flex}
+@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+#detail .body{flex:1;overflow-y:auto;padding-bottom:110px}
+.dt-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px}
+.icobtn{width:40px;height:40px;border-radius:99px;background:var(--surface);
+  box-shadow:var(--shadow);font-size:17px;display:flex;align-items:center;justify-content:center}
+.hero{margin:0 20px;border-radius:24px;aspect-ratio:4/4.6;display:flex;align-items:center;
+  justify-content:center;font-size:110px;position:relative;box-shadow:var(--shadow)}
+.dots{position:absolute;bottom:12px;display:flex;gap:5px;left:50%;transform:translateX(-50%)}
+.dots i{width:6px;height:6px;border-radius:99px;background:rgba(255,255,255,.55)}
+.dots i.a{background:#fff;width:16px}
+.dt-name{padding:18px 22px 0}
+.dt-name h3{font-size:26px;font-weight:800;letter-spacing:-0.02em}
+.dt-name p{font-size:14px;color:var(--sub);margin-top:2px}
+
+/* ★ 시그니처: 인연의 붉은 실 경로 배너 */
+.path{margin:16px 20px 0;background:var(--surface);border:1.5px solid var(--thread-soft);
+  border-radius:var(--r-lg);padding:16px 18px 14px;position:relative;overflow:hidden}
+.path .lbl{font-size:11px;font-weight:800;color:var(--thread);letter-spacing:.06em;margin-bottom:12px;
+  display:flex;justify-content:space-between;align-items:center}
+.chain{display:flex;align-items:center;flex-wrap:wrap;row-gap:12px}
+.knot{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:52px;
+  opacity:0;animation:knot .4s ease forwards}
+.chain .knot:nth-child(1){animation-delay:.05s}.chain .knot:nth-child(3){animation-delay:.25s}
+.chain .knot:nth-child(5){animation-delay:.45s}.chain .knot:nth-child(7){animation-delay:.65s}
+@keyframes knot{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.knot .bead{width:40px;height:40px;border-radius:99px;display:flex;align-items:center;
+  justify-content:center;font-size:20px;background:var(--ivory);border:2px solid var(--thread-soft)}
+.knot.me .bead{border-color:var(--blue);background:var(--blue-tint)}
+.knot.tgt .bead{border-color:var(--thread);background:var(--thread-soft)}
+.knot .who{font-size:11px;font-weight:700}
+.knot .rel{font-size:10px;color:var(--sub)}
+.tie{flex:1;min-width:16px;height:2px;margin:0 2px 26px;
+  background:repeating-linear-gradient(90deg,var(--thread) 0 5px,transparent 5px 9px);
+  opacity:0;animation:tieIn .3s ease forwards}
+.chain .tie:nth-child(2){animation-delay:.18s}.chain .tie:nth-child(4){animation-delay:.38s}
+.chain .tie:nth-child(6){animation-delay:.58s}
+@keyframes tieIn{to{opacity:1}}
+.path .sentence{margin-top:12px;font-size:15px;font-weight:700;line-height:1.45}
+.path .sentence b{color:var(--thread)}
+
+.bubble{margin:14px 20px 0;background:var(--yellow-tint);border-radius:4px 18px 18px 18px;
+  padding:13px 16px;font-size:14px;font-weight:600;color:#6B5B1E}
+.bubble span{display:block;font-size:11px;font-weight:800;color:#B08900;margin-bottom:3px}
+
+.info{margin:16px 20px 0;background:var(--surface);border-radius:var(--r-lg);padding:6px 18px;box-shadow:var(--shadow)}
+.info .row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.info .row:last-child{border:0}
+.info .k{color:var(--sub);font-weight:600}.info .v{font-weight:700}
+.sect{margin:18px 22px 0}
+.sect h4{font-size:13px;font-weight:800;color:var(--sub);letter-spacing:.04em;margin-bottom:9px}
+.sect p{font-size:15px;line-height:1.6}
+
+.cta{position:absolute;left:0;right:0;bottom:0;padding:14px 20px calc(16px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent,var(--ivory) 35%)}
+.btn{width:100%;padding:17px;border-radius:16px;font-size:16px;font-weight:800;
+  background:var(--blue);color:#fff;transition:transform .1s;box-shadow:0 6px 16px rgba(49,130,246,.3)}
+.btn:active{transform:scale(.98)}
+.btn.sent{background:var(--green);box-shadow:0 6px 16px rgba(34,197,94,.25)}
+
+/* ── 비대칭 사진: 잠금/열람 상태 ── */
+.face.lockface{background:linear-gradient(140deg,#EEE9DF,#DFD8C8)!important;flex-direction:column;gap:2px}
+.lockface .sil{font-size:44px;filter:grayscale(1);opacity:.45}
+.lockb,.grantb{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;border-radius:99px;padding:4px 9px;background:rgba(255,255,255,.92);color:#8B8578;white-space:nowrap;box-shadow:var(--shadow)}
+.grantb{color:var(--green)}
+.hero.hlock{background:linear-gradient(140deg,#EEE9DF,#DFD8C8)!important;flex-direction:column;gap:10px;font-size:70px}
+.hero.hlock .cap{font-size:13px;font-weight:700;color:#8B8578}
+.dual{display:flex;gap:9px}
+.btn.ghost{background:var(--surface);color:var(--sub);border:1.5px solid var(--line);box-shadow:none;flex:0 0 36%}
+.ctanote{text-align:center;font-size:11.5px;font-weight:600;color:var(--sub);margin-top:9px}
+
+/* ── 솔로 모드: 배너/넛지 ── */
+.soloban{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface);border:1.5px dashed #D9CFBF;border-radius:var(--r-md);padding:13px 14px;font-size:13.5px;font-weight:600;color:var(--sub);margin-bottom:14px;text-align:left}
+.soloban b{color:var(--ink)}
+.soloban span{margin-left:auto;color:#CFC6B6;font-size:17px}
+.nudge{background:var(--blue-tint);border-radius:var(--r-md);padding:12px 14px;font-size:13px;font-weight:600;color:#2B6CD4;margin-bottom:10px}
+
+/* ── 관리자 대시보드 ── */
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:var(--surface);border-radius:var(--r-md);padding:13px 14px;box-shadow:var(--shadow)}
+.stat .k{font-size:11px;font-weight:700;color:var(--sub)}
+.stat .v{font-size:22px;font-weight:800;margin-top:2px}
+.stat .d{font-size:11px;font-weight:700;color:var(--green);margin-top:2px}
+.ck{font-size:12px;font-weight:800;color:var(--sub);letter-spacing:.04em;margin-bottom:10px}
+.ratio{display:flex;height:14px;border-radius:99px;overflow:hidden;gap:2px}
+.legend{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:8px;color:var(--sub)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:5px}
+.funnel .frow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.funnel .fl{font-size:11.5px;font-weight:700;color:var(--sub);width:58px;flex-shrink:0}
+.funnel .bar{height:24px;border-radius:7px;background:var(--blue);color:#fff;display:flex;align-items:center;padding:0 9px;font-size:11px;font-weight:800;min-width:40px;white-space:nowrap}
+.qitem p{font-size:13.5px;font-weight:600;margin:8px 0 0;color:#4A453B}
+.qitem .lkbtns{margin-top:12px}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:6px;padding:3px 8px;margin-right:5px}
+.tag.ai{background:var(--blue-tint);color:var(--blue)}
+.tag.rp{background:#F1EDE6;color:#6E6759}
+.tag.ob{background:#FBEAEA;color:#C43D3D}
+.tag.ad{background:var(--yellow-tint);color:#B08900}
+.tag.il{background:#2A2925;color:#fff}
+.okd{background:#2A2925;color:#fff}
+
+/* ── 카드덱 ── */
+.decksum{display:flex;gap:10px;margin-bottom:16px}
+.sumbox{flex:1;background:var(--surface);border-radius:var(--r-md);padding:13px 8px;text-align:center;box-shadow:var(--shadow)}
+.sumbox .n{font-size:21px;font-weight:800}
+.sumbox .t{font-size:11px;color:var(--sub);font-weight:600;margin-top:1px}
+.sumbox.g .n{color:var(--green)}.sumbox.y .n{color:#D4A902}
+.dcard{position:relative;border-width:2.5px;border-style:solid}
+.dcard.wait{border-color:#3A362E}.dcard.busy{border-color:var(--yellow)}.dcard.done{border-color:var(--green)}
+.state{position:absolute;top:10px;right:10px;font-size:10px;font-weight:800;border-radius:99px;padding:4px 9px;z-index:2}
+.wait .state{background:#3A362E;color:#fff}.busy .state{background:var(--yellow);color:#6B5B1E}
+.done .state{background:var(--green);color:#fff}
+.ribbon{position:absolute;inset:0;background:rgba(34,197,94,.12);display:flex;align-items:center;justify-content:center;z-index:1}
+.ribbon b{background:#fff;border:1.5px solid var(--green);color:var(--green);border-radius:99px;
+  padding:7px 16px;font-size:14px;transform:rotate(-8deg);box-shadow:var(--shadow)}
+.addcard{border:2px dashed #D9CFBF;border-radius:var(--r-lg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;color:var(--sub);font-weight:700;font-size:14px;min-height:210px;background:transparent}
+.addcard i{font-size:26px;font-style:normal}
+.rankmini{margin-top:16px;background:linear-gradient(105deg,#20242C,#33405A);border-radius:var(--r-lg);
+  padding:16px 18px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.rankmini .t{font-size:12px;font-weight:700;color:#AEC4EE}
+.rankmini .r{font-size:18px;font-weight:800;margin-top:2px}
+.rankmini .crown{font-size:30px}
+
+/* ── 호감함 ── */
+.tabs{display:flex;gap:6px;background:#F1EADF;border-radius:14px;padding:5px;margin-bottom:16px}
+.tabs button{flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:700;color:var(--sub)}
+.tabs button.a{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.lkcard{background:var(--surface);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.lkrow{display:flex;gap:13px;align-items:center}
+.avatar{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:27px;flex-shrink:0}
+.lkinfo{flex:1;min-width:0}
+.lkinfo .n{font-size:16px;font-weight:800}
+.lkinfo .s{font-size:12.5px;color:var(--sub);margin-top:1px}
+.dday{font-size:11px;font-weight:800;color:var(--blue);background:var(--blue-tint);border-radius:99px;padding:4px 9px;flex-shrink:0}
+.lkbtns{display:flex;gap:9px;margin-top:14px}
+.lkbtns button{flex:1;padding:13px;border-radius:12px;font-size:14.5px;font-weight:800}
+.ok{background:var(--blue);color:#fff}
+.no{background:var(--ivory);color:var(--sub);border:1px solid var(--line)}
+.stt{font-size:11.5px;font-weight:800;border-radius:99px;padding:4px 10px;flex-shrink:0}
+.stt.p{background:var(--yellow-tint);color:#B08900}.stt.r{background:#FBEAEA;color:#C43D3D}
+.stt.e{background:#F1EDE6;color:var(--sub)}.stt.m{background:var(--green-tint);color:var(--green)}
+.duo{display:flex;align-items:center;justify-content:center;gap:2px;margin:6px 0 12px}
+.duo .avatar{width:64px;height:64px}
+.duo .amp{font-size:18px;margin:0 8px;color:var(--thread)}
+
+/* ── 성사 ── */
+.mcard{background:var(--surface);border-radius:24px;padding:26px 20px 20px;box-shadow:var(--shadow);
+  text-align:center;position:relative;overflow:hidden}
+.mcard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:repeating-linear-gradient(90deg,var(--thread) 0 8px,transparent 8px 13px)}
+.mcard h3{font-size:19px;font-weight:800;margin-top:12px}
+.mcard .d{font-size:13px;color:var(--sub);margin-top:3px}
+.phone{margin-top:16px;background:var(--blue-tint);border-radius:14px;padding:14px;
+  font-size:19px;font-weight:800;color:var(--blue);letter-spacing:.02em;width:100%}
+.phone small{display:block;font-size:11px;font-weight:600;color:#7FA8E8;margin-bottom:2px;letter-spacing:0}
+.matchmk{margin-top:12px;font-size:12.5px;font-weight:700;color:var(--sub)}
+.sharecard{margin-top:12px;width:100%;padding:14px;border-radius:14px;font-size:14.5px;font-weight:800;
+  background:var(--thread-soft);color:var(--thread)}
+
+/* ── MY ── */
+.invite{background:linear-gradient(115deg,var(--blue),#5B9DF8);border-radius:24px;padding:22px 20px;color:#fff;position:relative;overflow:hidden}
+.invite::after{content:"";position:absolute;right:-30px;top:-30px;width:130px;height:130px;
+  border:2.5px dashed rgba(255,255,255,.35);border-radius:99px}
+.invite .t{font-size:13px;font-weight:700;opacity:.85}
+.invite .code{font-size:27px;font-weight:800;letter-spacing:.05em;margin:6px 0 16px}
+.invite button{background:#fff;color:var(--blue);border-radius:12px;padding:12px 18px;font-size:14px;font-weight:800}
+.menu{margin-top:16px;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.menu button{display:flex;justify-content:space-between;width:100%;padding:17px 18px;font-size:15px;font-weight:600;border-bottom:1px solid var(--line);text-align:left}
+.menu button:last-child{border:0}
+.menu .arr{color:#CFC6B6}
+.toggle{width:44px;height:26px;border-radius:99px;background:var(--blue);position:relative}
+.toggle::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:99px;background:#fff}
+
+/* ── 하단 탭바 ── */
+nav{position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:30}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;
+  font-size:10.5px;font-weight:700;color:#B4AB9B;border-radius:12px;position:relative}
+nav button .ic{font-size:21px;filter:grayscale(1);opacity:.55;transition:.15s}
+nav button.a{color:var(--blue)}
+nav button.a .ic{filter:none;opacity:1;transform:translateY(-1px)}
+nav .badge{position:absolute;top:2px;right:calc(50% - 20px);min-width:17px;height:17px;border-radius:99px;
+  background:var(--thread);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+/* ── 바텀시트 / 토스트 / 파티클 ── */
+#dim{position:absolute;inset:0;background:rgba(28,27,24,.4);z-index:50;display:none}
+#dim.on{display:block;animation:fade .2s}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:51;background:var(--surface);
+  border-radius:24px 24px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom));
+  transform:translateY(105%);transition:transform .3s cubic-bezier(.3,.9,.3,1)}
+#sheet.on{transform:none}
+#sheet .grab{width:40px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 16px}
+#sheet h3{font-size:18px;font-weight:800;margin-bottom:4px}
+#sheet p{font-size:13.5px;color:var(--sub);margin-bottom:16px}
+.reason{display:block;width:100%;text-align:left;padding:15px 16px;border:1.5px solid var(--line);
+  border-radius:14px;font-size:15px;font-weight:600;margin-bottom:9px;transition:.12s}
+.reason:active,.reason.sel{border-color:var(--blue);background:var(--blue-tint);color:var(--blue)}
+#toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,16px);background:#2A2925;color:#fff;
+  border-radius:99px;padding:11px 20px;font-size:13.5px;font-weight:700;opacity:0;transition:.25s;z-index:60;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.heart{position:absolute;font-size:22px;z-index:55;pointer-events:none;animation:fly 1s ease-out forwards}
+@keyframes fly{to{transform:translateY(-130px) rotate(20deg);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <span class="logo">다리</span>
+    <button class="persona" id="persona" onclick="toggleMode()">미리보기 · <b>철수</b> 겸용 · 탭하여 전환</button>
+  </header>
+
+  <main id="main">
+
+    <!-- ═══ 홈 ═══ -->
+    <section class="screen on" id="s-home">
+      <h2 class="page">오늘의 인연</h2>
+      <p class="pagesub">모두 누군가의 지인이에요. 몇 다리인지 확인해 보세요.</p>
+      <div class="nudge" id="solo-nudge" style="display:none">✍️ <b>내 프로필 완성도 70%</b> — 사진·연애관을 채우면 수락률이 올라가요</div>
+      <button class="soloban" id="solo-banner" style="display:none" onclick="openDeckFirst()">🃏 소개해줄 지인이 있나요? <b>등록하면 카드덱이 열려요</b><span>›</span></button>
+      <div class="grid" id="feed"></div>
+    </section>
+
+    <!-- ═══ 카드덱 ═══ -->
+    <section class="screen" id="s-deck">
+      <h2 class="page">내 카드덱</h2>
+      <p class="pagesub">등록한 지인들의 매칭 현황이에요.</p>
+      <div class="decksum">
+        <div class="sumbox"><div class="n">2</div><div class="t">등록</div></div>
+        <div class="sumbox y"><div class="n">0</div><div class="t">진행 중</div></div>
+        <div class="sumbox g"><div class="n">1</div><div class="t">성사 🎓</div></div>
+      </div>
+      <div class="grid">
+        <div class="pcard dcard done">
+          <span class="state">성사</span>
+          <div class="face" style="background:linear-gradient(140deg,#FFE3D6,#FFD1E0)">🧕<div class="ribbon"><b>졸업 🎓</b></div></div>
+          <div class="meta"><div class="nm">보라 <span style="font-weight:600;color:var(--sub);font-size:13px">33</span></div>
+          <div class="loc">대학 후배 · 여행사</div>
+          <div class="cmt">맹구님과 성사! (4다리 커플)</div></div>
+        </div>
+        <div class="pcard dcard wait">
+          <span class="state">대기</span>
+          <div class="face" style="background:linear-gradient(140deg,#DDEBFF,#E8E0FF)">👨‍🍳</div>
+          <div class="meta"><div class="nm">철진 <span style="font-weight:600;color:var(--sub);font-size:13px">31</span></div>
+          <div class="loc">동생 · 요리사</div>
+          <div class="cmt">"요리를 저보다 잘합니다"</div></div>
+        </div>
+        <button class="addcard" onclick="toast('지인 등록 폼으로 이동해요 (시안)')"><i>＋</i>지인 카드 추가</button>
+      </div>
+      <div class="rankmini">
+        <div><div class="t">이달의 마담뚜</div><div class="r">1위 · 성사 1건 (성사율 100%)</div></div>
+        <div class="crown">👑</div>
+      </div>
+    </section>
+
+    <!-- ═══ 호감함 ═══ -->
+    <section class="screen" id="s-likes">
+      <h2 class="page">호감함</h2>
+      <p class="pagesub">받은 호감은 7일 안에 응답해 주세요.</p>
+      <div class="tabs">
+        <button class="a" onclick="lktab(this,'lk-in')">받은 호감</button>
+        <button onclick="lktab(this,'lk-out')">보낸 호감</button>
+        <button onclick="lktab(this,'lk-prop')">제안</button>
+      </div>
+      <div id="lk-in">
+        <div class="lkcard">
+          <div class="lkrow">
+            <div class="avatar" style="background:linear-gradient(140deg,#FFF0D8,#FFE0EA)">👩‍💼</div>
+            <div class="lkinfo"><div class="n">하나, 32</div><div class="s">은행원 · 🔗 3다리 · 📸 사진 동봉</div></div>
+            <span class="dday">D-6</span>
+          </div>
+          <div class="lkbtns">
+            <button class="no" onclick="openSheet()">거절하기</button>
+            <button class="ok" onclick="toast('수락! 서로의 번호가 공개돼요 🎉')">수락하기 💚</button>
+          </div>
+        </div>
+      </div>
+      <div id="lk-out" style="display:none">
+        <div class="lkcard"><div class="lkrow">
+          <div class="avatar" style="background:linear-gradient(140deg,#FFEBD6,#FFDDE8)">🧏‍♀️</div>
+          <div class="lkinfo"><div class="n">민지, 31</div><div class="s">사진이 공개됐어요 · 최종 결정 D-2</div></div>
+          <span class="stt m">사진 공개됨</span>
+        </div></div>
+        <div class="lkcard"><div class="lkrow">
+          <div class="avatar" style="background:linear-gradient(140deg,#E2F4E6,#D8ECFF)">👩‍🏫</div>
+          <div class="lkinfo"><div class="n">수지, 30</div><div class="s">유치원 교사 · 🔗 3다리</div></div>
+          <span class="stt p">전달됨 D-7</span>
+        </div></div>
+        <div class="lkcard"><div class="lkrow">
+          <div class="avatar" style="background:linear-gradient(140deg,#EFE2FF,#FFE2E2)">👩‍🎨</div>
+          <div class="lkinfo"><div class="n">지수, 34</div><div class="s">디자이너 · 🔗 2다리</div></div>
+          <span class="stt r">거절 · 이상형과 달랐어요</span>
+        </div></div>
+        <div class="lkcard"><div class="lkrow">
+          <div class="avatar" style="background:linear-gradient(140deg,#E8E8E8,#F3EDE2)">🧑‍⚕️</div>
+          <div class="lkinfo"><div class="n">서연, 31</div><div class="s">간호사 · 🔗 4다리</div></div>
+          <span class="stt e">기한 만료</span>
+        </div></div>
+      </div>
+      <div id="lk-prop" style="display:none">
+        <div class="lkcard" style="text-align:center">
+          <div style="font-size:12px;font-weight:800;color:var(--thread);margin-bottom:2px">백사장님의 제안</div>
+          <div style="font-size:17px;font-weight:800">"이 둘 어때요? 🤝"</div>
+          <div class="duo">
+            <div class="avatar" style="background:linear-gradient(140deg,#DDEBFF,#E8E0FF)">👨‍🍳</div>
+            <span class="amp">✕</span>
+            <div class="avatar" style="background:linear-gradient(140deg,#FFF3D6,#FFE3F0)">👩‍💻</div>
+          </div>
+          <div style="font-size:13.5px;color:var(--sub);margin-bottom:12px">내 카드 <b style="color:var(--ink)">철진</b> ↔ 은비 (데이터 분석가, 34)</div>
+          <div class="lkbtns" style="margin-top:0">
+            <button class="no" onclick="toast('제안을 거절했어요')">거절</button>
+            <button class="ok" onclick="toast('수락! 상대측 응답을 기다려요')">철진이 대신 수락</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 성사 ═══ -->
+    <section class="screen" id="s-match">
+      <h2 class="page">성사 🎉</h2>
+      <p class="pagesub">붉은 실이 이어졌어요. 이제 두 사람의 차례예요.</p>
+      <div class="mcard">
+        <div class="duo" style="margin-top:6px">
+          <div class="avatar" style="background:linear-gradient(140deg,#E7F0E2,#F0EAD8)">🧑‍🎨</div>
+          <span class="amp">❤️</span>
+          <div class="avatar" style="background:linear-gradient(140deg,#FFE3D6,#FFD1E0)">🧕</div>
+        </div>
+        <h3>맹구 ❤ 보라</h3>
+        <div class="d">2026. 6. 26 성사 · <span class="deg">4다리 커플</span></div>
+        <button class="phone" onclick="toast('번호를 복사했어요 📋')"><small>보라님 연락처 · 탭하여 복사</small>010-0000-0017</button>
+        <div class="matchmk">중매 성공: 철수님 🏅 마담뚜 +1</div>
+        <button class="sharecard" onclick="toast('인연 경로 카드를 만들어요 (Phase 3)')">🧵 인연 경로 카드 만들어 자랑하기</button>
+      </div>
+    </section>
+
+    <!-- ═══ MY ═══ -->
+    <section class="screen" id="s-my">
+      <h2 class="page">MY</h2>
+      <p class="pagesub">철수님, 지인이 늘수록 인연도 늘어요.</p>
+      <div class="invite">
+        <div class="t">내 추천코드</div>
+        <div class="code">SEED-CHULSOO</div>
+        <button onclick="toast('카카오톡 초대장을 보내요 💌')">카톡으로 초대하기</button>
+      </div>
+      <div class="menu">
+        <button onclick="toast('내 프로필 편집 (시안)')">내 소개팅 프로필 <span class="arr">›</span></button>
+        <button>관계 경로에 내 이름 표시 <span class="toggle"></span></button>
+        <button onclick="toast('차단 목록 (시안)')">차단 목록 <span class="arr">›</span></button>
+        <button style="color:var(--sub)">로그아웃</button>
+      </div>
+    </section>
+
+    <!-- ═══ 관리자 (ADMIN 전용) ═══ -->
+    <section class="screen" id="s-admin">
+      <h2 class="page">관리자 대시보드 🛡️</h2>
+      <p class="pagesub">ADMIN 계정에만 보이는 화면이에요.</p>
+      <div class="statgrid">
+        <div class="stat"><div class="k">전체 회원</div><div class="v">87</div><div class="d">▲ 이번 주 +12</div></div>
+        <div class="stat"><div class="k">누적 성사</div><div class="v">12쌍</div><div class="d">평균 3.2다리</div></div>
+        <div class="stat"><div class="k">활성 프로필</div><div class="v">15</div><div class="d">대리 등록 27%</div></div>
+        <div class="stat"><div class="k">미처리 신고·감지</div><div class="v" style="color:var(--thread)">3</div><div class="d" style="color:var(--sub)">24h 내 처리 목표</div></div>
+      </div>
+      <div class="lkcard">
+        <div class="ck">성비 균형 (활성 프로필)</div>
+        <div class="ratio"><i style="flex:47;background:var(--blue)"></i><i style="flex:53;background:var(--thread)"></i></div>
+        <div class="legend"><span><i style="background:var(--blue)"></i>남 41 (47%)</span><span><i style="background:var(--thread)"></i>여 46 (53%)</span></div>
+      </div>
+      <div class="lkcard funnel">
+        <div class="ck">매칭 퍼널 (최근 30일)</div>
+        <div class="frow"><span class="fl">호감 발신</span><div class="bar" style="width:100%">58</div></div>
+        <div class="frow"><span class="fl">사진 공개</span><div class="bar" style="width:56%;background:#5B9DF8">31 · 53%</div></div>
+        <div class="frow"><span class="fl">최종 성사</span><div class="bar" style="width:30%;background:var(--green)">12 · 39%</div></div>
+      </div>
+      <div class="ck" style="margin:6px 2px 10px">감지 · 신고 큐</div>
+      <div class="lkcard qitem">
+        <div><span class="tag ai">🤖 AI 감지</span><span class="tag ob">음란성 의심 0.91</span><span class="tag" style="background:#F1EDE6;color:#6E6759">자동 비공개됨</span></div>
+        <p>프로필 사진 3번 — 업로드 즉시 비공개 선조치, 검토 필요</p>
+        <div class="lkbtns"><button class="no" onclick="toast('기각 — 사진이 다시 공개돼요')">기각 (오탐)</button><button class="okd" onclick="toast('삭제 + 경고 1회 부과')">삭제·경고</button></div>
+      </div>
+      <div class="lkcard qitem">
+        <div><span class="tag ai">🤖 AI 감지</span><span class="tag ad">광고·스팸</span></div>
+        <p>자기소개에 외부 URL + "부업" 키워드 — 게시 유지 중</p>
+        <div class="lkbtns"><button class="no" onclick="toast('기각 처리했어요')">기각</button><button class="okd" onclick="toast('프로필 숨김 + 경고 부과')">숨김·경고</button></div>
+      </div>
+      <div class="lkcard qitem">
+        <div><span class="tag rp">🚨 신고</span><span class="tag il">연락처 노출</span></div>
+        <p>"연애관에 카톡 ID를 적어뒀어요" — 신고 1건 접수</p>
+        <div class="lkbtns"><button class="no" onclick="toast('기각 처리했어요')">기각</button><button class="okd" onclick="toast('해당 문구 삭제 + 안내 발송')">조치</button></div>
+      </div>
+      <div class="lkcard" style="display:flex;justify-content:space-between;font-size:13px;font-weight:700">
+        <span>제재 현황</span><span style="color:var(--sub)">경고 2 · 7일 정지 1 · 영구 차단 0</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ 프로필 상세 오버레이 ═══ -->
+  <div id="detail">
+    <div class="body">
+      <div class="dt-top">
+        <button class="icobtn" onclick="closeDetail()">←</button>
+        <button class="icobtn" onclick="toast('신고/차단 메뉴 (시안)')">⋯</button>
+      </div>
+      <div class="hero" id="d-face">
+        <div class="dots"><i class="a"></i><i></i><i></i></div>
+      </div>
+      <div class="dt-name"><h3 id="d-name"></h3><p id="d-sub"></p></div>
+
+      <div class="path">
+        <div class="lbl"><span>🧵 인연의 실</span><span class="deg" id="d-deg"></span></div>
+        <div class="chain" id="d-chain"></div>
+        <div class="sentence" id="d-sent"></div>
+      </div>
+
+      <div class="bubble" id="d-bubble"><span id="d-bubble-who"></span><span style="display:inline" id="d-bubble-txt"></span></div>
+
+      <div class="info" id="d-info"></div>
+      <div class="sect"><h4>취미</h4><div id="d-hobby"></div></div>
+      <div class="sect" id="d-love"></div>
+      <div style="height:20px"></div>
+    </div>
+    <div class="cta" id="d-cta"></div>
+  </div>
+
+  <!-- 바텀시트: 거절 사유 -->
+  <div id="dim" onclick="closeSheet()"></div>
+  <div id="sheet">
+    <div class="grab"></div>
+    <h3>정중하게 거절할게요</h3>
+    <p>선택한 사유만 전달되고, 서로의 프로필은 더 이상 보이지 않아요.</p>
+    <button class="reason" onclick="pick(this)">지금은 연애 생각이 없어요</button>
+    <button class="reason" onclick="pick(this)">이상형과 조금 달랐어요</button>
+    <button class="reason" onclick="pick(this)">아는 사이라서요</button>
+    <button class="reason" onclick="pick(this)">거리가 멀어서요</button>
+    <button class="reason" onclick="pick(this)">사유 없이 거절할게요</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- 하단 탭 -->
+  <nav>
+    <button class="a" onclick="go(this,'s-home')"><span class="ic">🏠</span>홈</button>
+    <button id="nav-deck" onclick="go(this,'s-deck')"><span class="ic">🃏</span>카드덱</button>
+    <button onclick="go(this,'s-likes')"><span class="ic">💚</span>호감<span class="badge">2</span></button>
+    <button onclick="go(this,'s-match')"><span class="ic">🎉</span>성사</button>
+    <button onclick="go(this,'s-my')"><span class="ic">👤</span>MY</button>
+  </nav>
+</div>
+
+<script>
+/* ── 피드 데이터 (SEED_NETWORK 인물망, 열람자=철수) ── */
+const P = [
+ {n:"수지",a:30,lock:1,e:"👩‍🏫",bg:"linear-gradient(140deg,#E2F4E6,#D8ECFF)",loc:"서울 성동구",job:"유치원 교사",deg:3,
+  chain:[["나","🙂","me"],["지인","짱구","🧢"],["지인","영희","👧"],["후배","수지","👩‍🏫","tgt"]],
+  sent:'<b>짱구</b>님의 지인(영희)의 후배',
+  who:"영희님의 한 줄 소개",cmt:"“아이들한테 인기 최고인 우리 후배님”",
+  info:{키:"167cm · 슬림","종교":"기독교","음주":"가끔","흡연":"비흡연","돌싱":"아니요",MBTI:"ESFP"},
+  hobby:["댄스","카페투어","사진"],love:"밝은 에너지를 나누는 연애가 좋아요."},
+ {n:"흰둥이",a:29,lock:1,e:"👩‍🎤",bg:"linear-gradient(140deg,#F0F0F0,#E4ECFF)",loc:"서울 성동구",job:"UX 디자이너",deg:2,
+  chain:[["나","🙂","me"],["지인","짱구","🧢"],["가족","흰둥이","👩‍🎤","tgt"]],
+  sent:'<b>짱구</b>님의 가족',
+  who:"짱구님의 한 줄 소개",cmt:"“제 동생인데 저보다 그림을 잘 그립니다”",
+  info:{키:"158cm · 슬림","종교":"무교","음주":"가끔","흡연":"비흡연","돌싱":"아니요",MBTI:"INFP"},
+  hobby:["그림","고양이","인디음악"],love:"취향이 맞는 사람과 오래 대화하고 싶어요."},
+ {n:"하나",a:32,lock:1,grant:1,e:"👩‍💼",bg:"linear-gradient(140deg,#FFF0D8,#FFE0EA)",loc:"서울 강남구",job:"은행원",deg:3,
+  chain:[["나","🙂","me"],["직장동료","백사장","🕴️"],["지인","비공개","🔒"],["지인","하나","👩‍💼","tgt"]],
+  sent:'<b>백사장</b>님의 지인의 지인 <span style="font-weight:600;color:var(--sub);font-size:12px">(이름 비공개 회원 포함)</span>',
+  who:"추천인의 한 줄 소개",cmt:"“차분하고 속 깊은 제 친구예요”",
+  info:{키:"163cm · 슬림","종교":"천주교","음주":"가끔","흡연":"비흡연","돌싱":"아니요",MBTI:"INFJ"},
+  hobby:["전시회","베이킹","독서"],love:"다정하고 성실한 분이면 좋겠어요."},
+ {n:"훈이",a:34,e:"👨‍🌾",bg:"linear-gradient(140deg,#FFF3DA,#E8F4E0)",loc:"경기 고양시",job:"식품 영업",deg:4,
+  chain:[["나","🙂","me"],["지인","짱구","🧢"],["지인","영희","👧"],["지인","맹구","🧑‍🎨"],["지인","훈이","👨‍🌾","tgt"]],
+  sent:'<b>짱구</b>님의 지인(영희)의 지인(맹구)의 지인',
+  who:"맹구님의 한 줄 소개",cmt:"“요리하는 남자, 낚시도 잘합니다”",
+  info:{키:"174cm · 보통","종교":"무교","음주":"즐김 (맥주 3잔)","흡연":"전자담배","돌싱":"아니요",MBTI:"ESFJ"},
+  hobby:["축구","요리","낚시"],love:"함께 있으면 편한 사람이 최고라고 생각해요."},
+ {n:"유리",a:33,lock:1,e:"🙆‍♀️",bg:"linear-gradient(140deg,#FFE8E0,#FFF6D8)",loc:"서울 동대문구",job:"회계",deg:2,
+  chain:[["나","🙂","me"],["지인","짱구","🧢"],["직장동료","유리","🙆‍♀️","tgt"]],
+  sent:'<b>짱구</b>님의 직장동료',
+  who:"짱구님의 한 줄 소개",cmt:"“회사에서 제일 야무진 동료입니다”",
+  info:{키:"165cm · 보통","종교":"불교","음주":"즐김 (와인 1병)","흡연":"비흡연","돌싱":"아니요",MBTI:"ESTJ"},
+  hobby:["와인","필라테스","여행"],love:"서로 존중하는 게 기본이라고 믿어요."},
+ {n:"태양",a:36,e:"🧑‍🎨",bg:"linear-gradient(140deg,#E4EAF6,#F6E9DC)",loc:"서울 마포구",job:"일러스트레이터 · 돌싱",deg:3,
+  chain:[["나","🙂","me"],["지인","짱구","🧢"],["직장동료","유리","🙆‍♀️"],["지인","태양","🧑‍🎨","tgt"]],
+  sent:'<b>짱구</b>님의 직장동료(유리)의 지인',
+  who:"유리님의 한 줄 소개",cmt:"“그림처럼 잔잔하고 다정한 사람이에요”",
+  info:{키:"180cm · 마른","종교":"무교","음주":"가끔","흡연":"비흡연","돌싱":"예",MBTI:"ISFP"},
+  hobby:["드로잉","전시회","자전거"],love:"두 번째라 더 신중하고, 그만큼 진심이에요."}
+];
+
+const $=id=>document.getElementById(id);
+const feed=$("feed");
+P.forEach((p,i)=>{
+  const locked=p.lock&&!p.grant;
+  const face=locked
+    ?`<div class="face lockface"><small class="deg">${p.deg}다리</small><span class="sil">👤</span><span class="lockb">🔒 수락 후 공개</span></div>`
+    :`<div class="face" style="background:${p.bg}"><small class="deg">${p.deg}다리</small>${p.e}${p.grant?`<span class="grantb">💚 사진 열람 수락됨</span>`:``}</div>`;
+  feed.insertAdjacentHTML("beforeend",
+  `<button class="pcard" onclick="openDetail(${i})">${face}
+     <div class="meta"><div class="nm">${p.n} <span style="font-weight:600;color:var(--sub);font-size:13px">${p.a}</span></div>
+     <div class="loc">${p.loc} · ${p.job.split(" ·")[0]}</div>
+     <div class="cmt">${p.cmt}</div></div></button>`);
+});
+
+/* ── 탭 전환 ── */
+function go(btn,id){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("a"));
+  btn.classList.add("a");
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  $(id).classList.add("on");
+  $("main").scrollTop=0; closeDetail();
+}
+function lktab(btn,id){
+  btn.parentNode.querySelectorAll("button").forEach(b=>b.classList.remove("a"));
+  btn.classList.add("a");
+  ["lk-in","lk-out","lk-prop"].forEach(t=>$(t).style.display=t===id?"":"none");
+}
+
+/* ── 역할 적응형: 겸용 → 솔로 → 관리자 모드 순환 ── */
+let mode=0; // 0 겸용(철수) · 1 솔로 · 2 관리자(ADMIN)
+function applyMode(){
+  const solo=mode===1, admin=mode===2;
+  document.querySelector("nav").style.display=admin?"none":"";
+  $("nav-deck").style.display=solo?"none":"";
+  $("solo-banner").style.display=solo?"":"none";
+  $("solo-nudge").style.display=solo?"":"none";
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  if(admin){ $("s-admin").classList.add("on"); }
+  else{
+    $("s-home").classList.add("on");
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("a"));
+    document.querySelector("nav button").classList.add("a");
+  }
+  $("main").scrollTop=0; closeDetail();
+  $("persona").innerHTML=[
+    "미리보기 · <b>철수</b> 겸용 · 탭하여 전환",
+    "미리보기 · <b>솔로 모드</b> · 탭하여 전환",
+    "미리보기 · <b>관리자</b> ADMIN · 탭하여 전환"][mode];
+}
+function toggleMode(){
+  mode=(mode+1)%3; applyMode();
+  toast(["겸용 모드 — 카드덱 탭 표시","솔로 모드 — 카드덱 탭 숨김","관리자 전용 대시보드예요 🛡️"][mode]);
+}
+function openDeckFirst(){
+  mode=0; applyMode();
+  go(document.querySelectorAll("nav button")[1],"s-deck");
+  toast("첫 카드 등록 완료 — 카드덱이 열렸어요 🃏");
+}
+
+/* ── 프로필 상세 ── */
+function openDetail(i){
+  const p=P[i];
+  const locked=p.lock&&!p.grant;
+  const hero=$("d-face");
+  hero.className="hero"+(locked?" hlock":"");
+  hero.style.background=locked?"":p.bg;
+  hero.innerHTML=locked
+    ?`👤<span class="cap">사진은 상대가 수락하면 공개돼요</span>`
+    :`<div class="dots"><i class="a"></i><i></i><i></i></div>${p.e}`;
+  $("d-name").textContent=`${p.n}, ${p.a}`;
+  $("d-sub").textContent=`${p.info["키"]} · ${p.loc} · ${p.job}`;
+  $("d-deg").textContent=`${p.deg}다리`;
+  $("d-chain").innerHTML=p.chain.map((k,idx)=>{
+    const cls=k[2]==="me"?"me":(k[3]==="tgt"?"tgt":"");
+    const bead=k[2]==="me"?"🙂":(k[2]||k[1]);
+    const knot=`<div class="knot ${cls}"><div class="bead">${k[2]==="me"?"🙂":k[2]}</div><div class="who">${k[1]||"나"}</div><div class="rel">${k[0]}</div></div>`;
+    return idx?`<div class="tie"></div>${knot}`:knot;
+  }).join("");
+  $("d-sent").innerHTML=p.sent+` (${p.n})`;
+  $("d-bubble-who").textContent=p.who;
+  $("d-bubble-txt").textContent=p.cmt;
+  $("d-info").innerHTML=Object.entries(p.info).map(([k,v])=>`<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+  $("d-hobby").innerHTML=p.hobby.map(h=>`<span class="chip">${h}</span>`).join("");
+  $("d-love").innerHTML=`<h4>연애관</h4><p>${p.love}</p>`;
+  const cta=$("d-cta");
+  if(locked){
+    cta.innerHTML=`<button class="btn" id="d-btn" onclick="sendLike(event)">📮 내 프로필 보내기</button>
+      <p class="ctanote">상대가 수락하면 사진이 공개되고, 최종 결정은 내가 해요</p>`;
+  }else if(p.grant){
+    cta.innerHTML=`<div class="dual"><button class="btn ghost" onclick="openSheet()">거절</button>
+      <button class="btn" id="d-btn" onclick="finalAccept(event)">최종 수락 💚</button></div>
+      <p class="ctanote">⏳ 결정 기한 47:12 남음 · 결정은 당당하게, 대신 빠르게</p>`;
+  }else{
+    cta.innerHTML=`<button class="btn" id="d-btn" onclick="sendLike(event)">💚 호감 보내기</button>`;
+  }
+  $("detail").classList.add("on");
+  $("detail").querySelector(".body").scrollTop=0;
+}
+function closeDetail(){$("detail").classList.remove("on")}
+
+/* ── 호감 전송 / 최종 수락 ── */
+function hearts(e){
+  for(let i=0;i<7;i++){
+    const h=document.createElement("span");
+    h.className="heart"; h.textContent=["💚","💙","🧵"][i%3];
+    h.style.left=(e.clientX-($("app").getBoundingClientRect().left)+ (Math.random()*80-40))+"px";
+    h.style.top=(e.clientY-40)+"px";
+    h.style.animationDelay=(i*0.06)+"s";
+    $("app").appendChild(h);
+    setTimeout(()=>h.remove(),1400);
+  }
+}
+function sendLike(e){
+  const b=$("d-btn");
+  if(b.disabled)return;
+  b.disabled=true; b.classList.add("sent"); b.textContent="전달했어요 · 상대 응답 대기 중";
+  hearts(e);
+  toast("프로필을 보냈어요! 동시 진행 2/3");
+}
+function finalAccept(e){
+  const b=$("d-btn");
+  if(b.disabled)return;
+  b.disabled=true; b.classList.add("sent"); b.textContent="성사! 번호가 공개돼요 🎉";
+  hearts(e);
+  toast("매칭 성사! 성사 탭에서 확인하세요");
+}
+
+/* ── 바텀시트 / 토스트 ── */
+function openSheet(){$("dim").classList.add("on");$("sheet").classList.add("on")}
+function closeSheet(){$("dim").classList.remove("on");$("sheet").classList.remove("on");
+  document.querySelectorAll(".reason").forEach(r=>r.classList.remove("sel"))}
+function pick(el){
+  el.classList.add("sel");
+  setTimeout(()=>{closeSheet();toast("사유와 함께 정중히 전달했어요")},350);
+}
+let tt;
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add("on");
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),2200);
+}
+</script>
+</body>
+</html>

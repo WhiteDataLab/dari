@@ -1,0 +1,451 @@
+// 다리 — 지인 기반 소개팅 서비스
+// 설계 근거: docs/DB_SCHEMA.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────
+// 회원 & 인증
+// ─────────────────────────────
+
+enum RelationType {
+  FRIEND // 지인
+  FAMILY // 가족
+  COWORKER // 직장동료
+  SENIOR // 선배
+  JUNIOR // 후배
+  COUSIN // 사촌
+  ETC // 기타
+  SELF // 본인 (Profile.relationToOwner 전용)
+}
+
+enum VerificationMethod {
+  COMPANY_EMAIL // 회사 이메일 인증
+  VOUCH // 지인 보증
+}
+
+enum UserRole {
+  MEMBER
+  ADMIN
+}
+
+model User {
+  id                 String             @id @default(cuid())
+  role               UserRole           @default(MEMBER)
+  email              String             @unique
+  emailVerifiedAt    DateTime?
+  verificationMethod VerificationMethod @default(COMPANY_EMAIL)
+
+  name      String
+  phone     String // AES-256-GCM 암호화 저장 (앱 레이어)
+  birthDate DateTime
+  company   String
+
+  // 추천 관계 (그래프 엣지 #1)
+  referralCode       String        @unique @default(cuid())
+  referredById       String?
+  referredBy         User?         @relation("Referral", fields: [referredById], references: [id])
+  referrals          User[]        @relation("Referral")
+  relationToReferrer RelationType?
+
+  // 개인정보 동의
+  allowNameInPath Boolean  @default(true)
+  agreedTermsAt   DateTime
+  agreedPrivacyAt DateTime
+
+  profiles       Profile[]       @relation("ProfileOwner")
+  selfProfile    Profile?        @relation("SelfProfile")
+  sentLikes      Like[]          @relation("LikeActor")
+  proposals      MatchProposal[] @relation("Matchmaker")
+  notifications  Notification[]
+  vouchesGiven   VouchRequest[]  @relation("Voucher")
+  vouchReceived  VouchRequest?   @relation("Vouchee")
+  blocksMade     Block[]         @relation("Blocker")
+  blocksReceived Block[]         @relation("Blocked")
+  reportsMade    Report[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referredById])
+}
+
+model EmailVerification {
+  id        String    @id @default(cuid())
+  email     String
+  code      String // 6자리
+  expiresAt DateTime // 발급 후 10분
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, code])
+}
+
+enum VouchStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model VouchRequest {
+  id        String      @id @default(cuid())
+  voucherId String // 보증인 (인증된 회원)
+  voucher   User        @relation("Voucher", fields: [voucherId], references: [id])
+  voucheeId String      @unique // 보증 대상 (가입 대기자)
+  vouchee   User        @relation("Vouchee", fields: [voucheeId], references: [id])
+  status    VouchStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  decidedAt DateTime?
+}
+
+// ─────────────────────────────
+// 소개팅 프로필
+// ─────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum BodyType {
+  SLIM
+  SLENDER
+  NORMAL
+  CHUBBY
+  MUSCULAR
+  GLAMOROUS
+}
+
+enum Religion {
+  NONE
+  PROTESTANT
+  CATHOLIC
+  BUDDHIST
+  ETC
+}
+
+enum DrinkingHabit {
+  NEVER
+  SOMETIMES
+  OFTEN
+}
+
+enum SmokingHabit {
+  NON_SMOKER
+  E_CIGARETTE
+  SMOKER
+}
+
+enum ProfileStatus {
+  ACTIVE // 탐색 노출 중 (⬛ 대기)
+  ENGAGED // 예약만, 미사용 — 진행 중은 PENDING Like 존재 여부로 파생 계산
+  MATCHED // 성사, 졸업 (🟩) — 피드에서 숨김
+  HIDDEN // 소유자가 숨김
+}
+
+model Profile {
+  id      String  @id @default(cuid())
+  ownerId String // 등록자 (본인 or 중매인)
+  owner   User    @relation("ProfileOwner", fields: [ownerId], references: [id])
+  isSelf  Boolean @default(false)
+  userId  String? @unique // isSelf=true일 때 본인 User 연결
+  user    User?   @relation("SelfProfile", fields: [userId], references: [id])
+
+  relationToOwner RelationType // 등록자와의 관계 (isSelf면 SELF). 경로의 마지막 칸
+
+  // 대리 등록 시 당사자 동의 확인
+  consentConfirmed     Boolean   @default(false)
+  consentNotifiedAt    DateTime?
+  delegatePhotoConsent Boolean   @default(false) // 사진 열람 수락 권한을 중매인에게 위임
+
+  name               String
+  gender             Gender
+  birthYear          Int
+  heightCm           Int
+  bodyType           BodyType
+  phone              String // 암호화 저장, 성사 전 응답 미포함
+  areaSido           String
+  areaGugun          String
+  company            String
+  companyMasked      Boolean       @default(false)
+  jobTitle           String
+  religion           Religion
+  drinking           DrinkingHabit
+  drinkCapacity      String?
+  smoking            SmokingHabit
+  isDivorced         Boolean       @default(false)
+  mbti               String?
+  hobbies            String[]
+  idealType          String?       @db.VarChar(200)
+  loveView           String?       @db.VarChar(200)
+  recommenderComment String?       @db.VarChar(100) // 추천인의 한 줄 소개
+
+  status ProfileStatus @default(ACTIVE)
+
+  photos        ProfilePhoto[]
+  likesSent     Like[]           @relation("LikeFrom")
+  likesReceived Like[]           @relation("LikeTo")
+  proposalsA    MatchProposal[]  @relation("ProposalA")
+  proposalsB    MatchProposal[]  @relation("ProposalB")
+  matchesA      Match[]          @relation("MatchA")
+  matchesB      Match[]          @relation("MatchB")
+  reports       Report[]
+  flags         ModerationFlag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status, gender])
+}
+
+model ProfilePhoto {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url       String // Supabase Storage public URL
+  isMain    Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────
+// 호감 / 제안 / 성사
+// ─────────────────────────────
+
+enum LikeStatus {
+  PENDING // 1단계: 남성 프로필 전송, 여성 응답 대기 (7일)
+  PHOTO_GRANTED // 2단계: 여성 수락 → 사진 공개, 남성 최종 결정 대기 (48시간)
+  ACCEPTED // 3단계: 최종 수락 → Match 생성
+  REJECTED
+  EXPIRED // 기한 무응답
+}
+
+enum RejectReason {
+  NOT_READY // 지금은 연애 생각이 없어요
+  NOT_MY_TYPE // 이상형과 조금 달랐어요
+  KNOW_EACH_OTHER // 아는 사이라서요
+  TOO_FAR // 거리가 멀어서요
+  NO_REASON // 사유 없이 거절
+}
+
+model Like {
+  id             String        @id @default(cuid())
+  fromProfileId  String
+  fromProfile    Profile       @relation("LikeFrom", fields: [fromProfileId], references: [id])
+  toProfileId    String
+  toProfile      Profile       @relation("LikeTo", fields: [toProfileId], references: [id])
+  actorUserId    String // 실제 버튼 누른 회원 (본인 or 중매인)
+  actor          User          @relation("LikeActor", fields: [actorUserId], references: [id])
+  status         LikeStatus    @default(PENDING)
+  rejectReason   RejectReason?
+  expiresAt      DateTime // 1단계 기한: 생성 + 7일
+  photoGrantedAt DateTime? // 여성 수락(사진 공개) 시각
+  finalDeadline  DateTime? // 3단계 기한: photoGrantedAt + 48시간
+  respondedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([fromProfileId, toProfileId]) // 재호감 방지
+  @@index([toProfileId, status])
+}
+
+enum PhotoAccessSource {
+  FEMALE_GRANT // 여성이 남성의 프로필 전송을 수락
+  FEMALE_INITIATE // 여성 발신 호감 (사진 동봉)
+  MATCH // 성사
+}
+
+// 여성 사진 열람권. 모든 여성 사진 응답은 이 테이블을 통과해야 함 (서버 사이드 gate)
+model PhotoAccess {
+  id        String            @id @default(cuid())
+  profileId String // 사진 소유 프로필 (여성)
+  viewerId  String // 열람 허용된 회원 (남성)
+  source    PhotoAccessSource
+  likeId    String? // 발급 근거 Like
+  grantedAt DateTime          @default(now())
+  revokedAt DateTime? // 거절/만료/차단 시 즉시 세팅 → 열람 차단
+
+  @@unique([profileId, viewerId])
+  @@index([viewerId, revokedAt])
+}
+
+enum ProposalStatus {
+  PENDING
+  MATCHED // 양측 수락
+  REJECTED
+  EXPIRED
+}
+
+model MatchProposal {
+  id           String         @id @default(cuid())
+  matchmakerId String
+  matchmaker   User           @relation("Matchmaker", fields: [matchmakerId], references: [id])
+  profileAId   String
+  profileA     Profile        @relation("ProposalA", fields: [profileAId], references: [id])
+  profileBId   String
+  profileB     Profile        @relation("ProposalB", fields: [profileBId], references: [id])
+  acceptedA    Boolean?
+  acceptedB    Boolean?
+  rejectReason RejectReason?
+  status       ProposalStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  decidedAt    DateTime?
+
+  @@index([matchmakerId, status])
+}
+
+model Match {
+  id                 String   @id @default(cuid())
+  profileAId         String
+  profileA           Profile  @relation("MatchA", fields: [profileAId], references: [id])
+  profileBId         String
+  profileB           Profile  @relation("MatchB", fields: [profileBId], references: [id])
+  sourceLikeId       String?  @unique
+  sourceProposalId   String?  @unique
+  matchmakerId       String? // 리더보드 집계용
+  degreeOfSeparation Int? // 성사 시점 촌수 스냅샷
+  phoneRevealedAt    DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  @@unique([profileAId, profileBId])
+}
+
+// ─────────────────────────────
+// 알림 / 차단 / 신고
+// ─────────────────────────────
+
+enum NotificationType {
+  LIKE_RECEIVED
+  LIKE_ACCEPTED
+  LIKE_REJECTED
+  LIKE_EXPIRED
+  PROPOSAL_RECEIVED
+  MATCH_CREATED
+  VOUCH_REQUESTED
+  PROFILE_REGISTERED_CONSENT // 대리 등록 당사자 통지
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  payload   Json // { likeId, profileId, ... }
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+enum ReportReason {
+  OBSCENE // 음란성
+  AD_SPAM // 광고·스팸
+  ILLEGAL // 불법 (도박·성매매 등)
+  FAKE_INFO // 허위 정보
+  NO_CONSENT // 당사자 미동의 등록
+  CONTACT_LEAK // 연락처·SNS 노출 (우회 교환)
+  ETC
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED_REMOVED
+  RESOLVED_DISMISSED
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  reporterId   String
+  reporter     User         @relation(fields: [reporterId], references: [id])
+  profileId    String
+  profile      Profile      @relation(fields: [profileId], references: [id])
+  photoId      String? // 개별 사진 신고 시
+  reason       ReportReason
+  detail       String?
+  status       ReportStatus @default(PENDING)
+  resolvedById String? // 처리 관리자 (감사 추적)
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([status])
+}
+
+// ─────────────────────────────
+// 자동 감지 & 제재 (Phase 2에서 본격 사용)
+// ─────────────────────────────
+
+enum FlagSource {
+  AUTO_TEXT
+  AUTO_IMAGE
+  USER_REPORT
+  RATE_LIMIT
+}
+
+enum FlagLabel {
+  OBSCENE
+  AD_SPAM
+  ILLEGAL
+  CONTACT_LEAK
+}
+
+enum FlagStatus {
+  PENDING // 검토 대기
+  DISMISSED // 기각 (오탐)
+  REMOVED // 삭제/숨김 확정
+}
+
+model ModerationFlag {
+  id           String      @id @default(cuid())
+  profileId    String
+  profile      Profile     @relation(fields: [profileId], references: [id])
+  photoId      String?
+  field        String? // 텍스트 감지 시 대상 필드명
+  source       FlagSource
+  labels       FlagLabel[]
+  score        Float?
+  autoBlocked  Boolean     @default(false)
+  status       FlagStatus  @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@index([status, createdAt])
+}
+
+enum SanctionType {
+  WARNING
+  SUSPEND_7D
+  BAN
+}
+
+model Sanction {
+  id         String       @id @default(cuid())
+  userId     String
+  type       SanctionType
+  reason     String
+  flagId     String?
+  issuedById String
+  expiresAt  DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+}
