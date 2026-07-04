@@ -2,6 +2,31 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-04 (밤) — 전체 보안 감사 + 강화 (migration 2_security, 배포 완료)
+
+### 감사 결과
+- 커밋 이력 시크릿 스캔: `.env`/`.env.local` 미커밋 확인, DB 비밀번호·secret key·앱 비밀번호 등 유효 시크릿 커밋 이력 없음. HANDOFF에 남아있던 **무효화된 옛 Gmail 앱 비밀번호 문자열만 발견·제거** (이미 로그인 불가한 값, git 이력에는 잔존 — repo는 private 유지 권장)
+- 위험 싱크 없음: dangerouslySetInnerHTML / queryRawUnsafe / eval / 하드코딩 호스트 0건. SQL은 전부 파라미터화($queryRaw 태그드 템플릿)
+- 기존 안전장치 재확인: phone AES-256-GCM + 성사 전 API 미포함, 여성 사진 서버사이드 gate, IDOR(소유자 검사) 전 라우트 커버, 세션 쿠키 SameSite=Lax(CSRF 완화)
+
+### 발견·수정한 취약점 (전부 배포됨)
+1. 인증코드 재사용: 로그인 검증이 usedAt 미확인 → 10분 내 replay 가능 → 소진 처리로 차단
+2. 6자리 코드 무차별 대입: 시도 제한 없음 → `EmailVerification.attempts` 5회 초과 시 무효화
+3. 메일 폭탄: 이메일당 제한만 존재 → 전역 시간당 30회 상한 추가
+4. 추천코드 열거로 회원 실명 수집 가능(비인증 API) → 이메일 인증 통과자만 조회 가능
+5. API 응답에 phoneHash 노출 → 제거 / 업로드 파일 타입 미검증 → image/* + sharp 실패 400
+6. 보안 헤더 부재 → XFO(DENY)·nosniff·Referrer-Policy·Permissions-Policy 추가
+7. 첫 가입자 ADMIN 레이스 → 트랜잭션 내 재확인
+
+### 검증
+- 보안 E2E: 헤더/5회 잠금/추천코드 게이트/replay 차단/2번째 가입자 MEMBER/비로그인 401 — 통과 후 테스트 계정 즉시 삭제
+- **실서비스 가동 시작**: 운영자 계정(백종환, ADMIN) 프로덕션 가입 확인 — 이후 로컬 E2E는 라이브 DB 공유이므로 실데이터 미생성·즉시삭제 원칙 준수할 것
+
+### 수용한 잔여 리스크 (10~30명 규모 기준)
+- IP 단위 레이트 리밋 없음 (서버리스 + DB 카운트 방식으로 대체) / phone 암호화·HMAC이 같은 키(PHONE_ENC_KEY) 사용 / Vercel cron은 CRON_SECRET 설정 시 자동 Bearer 첨부로 보호됨
+
+---
+
 ## 2026-07-04 (저녁) — 첫 가입 버그 수정 + 노출 회피 기능 (배포 완료)
 
 ### 완료
