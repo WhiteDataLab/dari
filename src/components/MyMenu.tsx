@@ -67,6 +67,9 @@ export function MenuLinks() {
       <Link href="/deck" className="flex w-full items-center justify-between border-b border-line px-4.5 py-4 text-[15px] font-semibold">
         내 카드덱 <span className="text-[#CFC6B6]">›</span>
       </Link>
+      <Link href="/me/avoid" className="flex w-full items-center justify-between border-b border-line px-4.5 py-4 text-[15px] font-semibold">
+        아는 사람 피하기 🙈 <span className="text-[#CFC6B6]">›</span>
+      </Link>
       <Link href="/notifications" className="flex w-full items-center justify-between border-b border-line px-4.5 py-4 text-[15px] font-semibold">
         알림 <span className="text-[#CFC6B6]">›</span>
       </Link>

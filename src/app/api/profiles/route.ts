@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { encryptPhone } from "@/lib/crypto";
+import { encryptPhone, hashPhone } from "@/lib/crypto";
 import { checkFreeText } from "@/lib/moderation";
 import {
   BodyType,
@@ -39,6 +39,7 @@ const profileSchema = z.object({
   idealType: z.string().max(200).optional().nullable(),
   loveView: z.string().max(200).optional().nullable(),
   recommenderComment: z.string().max(100).optional().nullable(),
+  avoidSameCompany: z.boolean().optional(),
 });
 
 // POST /api/profiles — 본인 or 지인 프로필 생성
@@ -94,6 +95,8 @@ export async function POST(req: Request) {
       heightCm: d.heightCm,
       bodyType: d.bodyType,
       phone: encryptPhone(d.phone.replace(/-/g, "")),
+      phoneHash: hashPhone(d.phone),
+      avoidSameCompany: d.avoidSameCompany ?? true,
       areaSido: d.areaSido,
       areaGugun: d.areaGugun,
       company: d.company.trim(),

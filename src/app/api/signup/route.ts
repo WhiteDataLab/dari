@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { encryptPhone, generateReferralCode } from "@/lib/crypto";
+import { encryptPhone, generateReferralCode, hashPhone } from "@/lib/crypto";
 import { RelationType } from "@prisma/client";
+
+// GET /api/signup — 첫 회원(운영자)인지 여부. 첫 회원은 추천코드 단계를 건너뛴다
+export async function GET() {
+  const userCount = await prisma.user.count();
+  return NextResponse.json({ needsReferral: userCount > 0 });
+}
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -66,6 +72,7 @@ export async function POST(req: Request) {
       emailVerifiedAt: now,
       name: data.name.trim(),
       phone: encryptPhone(data.phone.replace(/-/g, "")),
+      phoneHash: hashPhone(data.phone),
       birthDate: new Date(data.birthDate),
       company: data.company.trim(),
       referralCode: generateReferralCode(),

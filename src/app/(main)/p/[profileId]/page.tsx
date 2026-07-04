@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
+import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,13 @@ export default async function ProfileDetailPage({
   if (!profile || profile.status === "HIDDEN") notFound();
 
   const isMine = profile.ownerId === userId || profile.userId === userId;
+
+  // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
+  if (!isMine) {
+    const ctx = await getViewerContext(userId);
+    if (!(await isProfileVisible(ctx, profile))) notFound();
+  }
+
   const mySelf = await prisma.profile.findFirst({ where: { userId, isSelf: true } });
 
   // 나(본인 프로필)와 이 프로필 사이의 진행 중 Like → CTA 모드 결정

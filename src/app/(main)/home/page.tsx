@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { computeRelationPath } from "@/lib/relationPath";
+import { getViewerContext, filterVisibleProfiles } from "@/lib/visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function HomePage() {
     excludeIds.add(r.toProfileId);
   }
 
-  const profiles = await prisma.profile.findMany({
+  const candidates = await prisma.profile.findMany({
     where: {
       status: "ACTIVE",
       id: { notIn: [...excludeIds] },
@@ -46,6 +47,10 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
     take: 60,
   });
+
+  // 같은 회사 회피 + 아는 사람 피하기 (상호 비노출)
+  const ctx = await getViewerContext(userId);
+  const profiles = await filterVisibleProfiles(ctx, candidates);
 
   // 여성 사진 gate: 열람권 일괄 조회
   const accessSet = new Set(

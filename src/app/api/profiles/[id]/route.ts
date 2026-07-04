@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
+import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { decryptPhone } from "@/lib/crypto";
 
 // GET /api/profiles/[id] — 상세 + 관계 경로 (phone 제외, 사진 gate 적용)
@@ -29,6 +30,14 @@ export async function GET(
   });
   const myProfileIds = myProfiles.map((p) => p.id);
   const isMine = profile.ownerId === userId || profile.userId === userId;
+
+  // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
+  if (!isMine) {
+    const ctx = await getViewerContext(userId);
+    if (!(await isProfileVisible(ctx, profile))) {
+      return NextResponse.json({ error: "프로필을 찾을 수 없어요" }, { status: 404 });
+    }
+  }
 
   if (!isMine && myProfileIds.length > 0) {
     const rejected = await prisma.like.findFirst({
@@ -103,6 +112,14 @@ export async function PATCH(
     await prisma.profile.update({
       where: { id },
       data: { status: body.action === "hide" ? "HIDDEN" : "ACTIVE" },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "avoidCompany") {
+    await prisma.profile.update({
+      where: { id },
+      data: { avoidSameCompany: !!body.value },
     });
     return NextResponse.json({ ok: true });
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 
 const CONCURRENT_LIMIT = 3; // 동시 진행 호감 3건 (PROJECT_SPEC §9.1)
 
@@ -44,6 +45,12 @@ export async function POST(req: Request) {
   }
   if (toProfile.gender === fromProfile.gender) {
     return NextResponse.json({ error: "같은 성별에게는 보낼 수 없어요" }, { status: 400 });
+  }
+
+  // 노출 회피 대상(같은 회사/아는 사람)에게는 호감 전송 불가
+  const ctx = await getViewerContext(userId);
+  if (!(await isProfileVisible(ctx, toProfile))) {
+    return NextResponse.json({ error: "프로필을 찾을 수 없어요" }, { status: 404 });
   }
 
   // 재호감 방지 (양방향)

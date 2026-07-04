@@ -45,6 +45,7 @@ model User {
 
   name      String
   phone     String // AES-256-GCM 암호화 저장 (앱 레이어)
+  phoneHash String? // HMAC-SHA256(정규화 번호) — 연락처 차단 매칭용
   birthDate DateTime
   company   String
 
@@ -70,11 +71,26 @@ model User {
   blocksMade     Block[]         @relation("Blocker")
   blocksReceived Block[]         @relation("Blocked")
   reportsMade    Report[]
+  contactBlocks  ContactBlock[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([referredById])
+  @@index([phoneHash])
+}
+
+// 아는 사람 피하기 — 등록한 번호(해시)와 일치하는 회원/프로필은 상호 비노출
+model ContactBlock {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  phoneHash String // HMAC-SHA256(정규화 번호). 원본 번호는 저장하지 않음
+  label     String? // 표시용 마스킹 (010-****-1234)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, phoneHash])
+  @@index([phoneHash])
 }
 
 model EmailVerification {
@@ -171,6 +187,7 @@ model Profile {
   heightCm           Int
   bodyType           BodyType
   phone              String // 암호화 저장, 성사 전 응답 미포함
+  phoneHash          String? // 연락처 차단 매칭용
   areaSido           String
   areaGugun          String
   company            String
@@ -186,6 +203,8 @@ model Profile {
   idealType          String?       @db.VarChar(200)
   loveView           String?       @db.VarChar(200)
   recommenderComment String?       @db.VarChar(100) // 추천인의 한 줄 소개
+
+  avoidSameCompany Boolean @default(true) // 같은 회사 상호 비노출
 
   status ProfileStatus @default(ACTIVE)
 
@@ -204,6 +223,7 @@ model Profile {
 
   @@index([ownerId])
   @@index([status, gender])
+  @@index([phoneHash])
 }
 
 model ProfilePhoto {

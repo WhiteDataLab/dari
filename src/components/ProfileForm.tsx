@@ -74,6 +74,7 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
   const [areaGugun, setAreaGugun] = useState("");
   const [company, setCompany] = useState("");
   const [companyMasked, setCompanyMasked] = useState(false);
+  const [avoidSameCompany, setAvoidSameCompany] = useState(true);
   const [jobTitle, setJobTitle] = useState("");
 
   // 라이프스타일
@@ -143,7 +144,7 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
           name, gender,
           birthYear: Number(birthYear),
           heightCm: Number(heightCm),
-          bodyType, phone, areaSido, areaGugun, company, companyMasked, jobTitle,
+          bodyType, phone, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
           religion, drinking,
           drinkCapacity: drinkCapacity || null,
           smoking,
@@ -240,6 +241,10 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
           <label className="mt-2 flex items-center gap-2 text-[13px] font-medium text-sub">
             <input type="checkbox" checked={companyMasked} onChange={(e) => setCompanyMasked(e.target.checked)} className="h-4 w-4 accent-[#3182F6]" />
             프로필에는 직장명을 숨길래요
+          </label>
+          <label className="mt-2 flex items-center gap-2 text-[13px] font-medium text-sub">
+            <input type="checkbox" checked={avoidSameCompany} onChange={(e) => setAvoidSameCompany(e.target.checked)} className="h-4 w-4 accent-[#3182F6]" />
+            같은 회사 사람과는 서로 안 보이게 할래요 (권장)
           </label>
           <p className={label}>직무</p>
           <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className={input} />

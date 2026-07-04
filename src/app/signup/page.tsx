@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -20,6 +20,15 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 첫 회원(운영자)은 추천코드 단계를 건너뛴다
+  const [needsReferral, setNeedsReferral] = useState(true);
+  useEffect(() => {
+    fetch("/api/signup")
+      .then((r) => r.json())
+      .then((d) => setNeedsReferral(d.needsReferral !== false))
+      .catch(() => {});
+  }, []);
 
   // STEP 1: 이메일 인증
   const [email, setEmail] = useState("");
@@ -70,7 +79,7 @@ export default function SignupPage() {
       setError("이미 가입된 이메일이에요. 로그인해 주세요.");
       return;
     }
-    setStep(2);
+    setStep(needsReferral ? 2 : 3);
   }
 
   async function checkReferral() {

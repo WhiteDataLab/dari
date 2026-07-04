@@ -33,6 +33,12 @@ export function decryptPhone(encrypted: string): string {
   ]).toString("utf8");
 }
 
+// 연락처 차단 매칭용 해시 — 원본 번호를 저장하지 않고 대조만 가능하게
+export function hashPhone(plain: string): string {
+  const normalized = plain.replace(/\D/g, "");
+  return crypto.createHmac("sha256", getKey()).update(normalized).digest("hex");
+}
+
 export function generateCode(): string {
   return String(crypto.randomInt(100000, 1000000));
 }
