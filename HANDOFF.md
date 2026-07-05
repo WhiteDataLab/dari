@@ -2,6 +2,19 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-05 (4차) — 지인의 지인 + 산업 분야 + 사진 편집 강화 (migration 6_industry_relation, 배포 완료)
+
+### 사용자 요구 → 조치
+1. **지인의 지인 등록**: `RelationType.FRIEND_OF_FRIEND` 추가 (폼 관계 칩 "지인의 지인"). 관계 경로 문장은 "…의 지인의 지인", 촌수는 미가입 지인 1명을 거치므로 **+2칸** 계산 (`relationPath.ts`)
+2. **산업 분야**: `Profile.industry` (기존 행 nullable, 신규/수정은 필수 — 16종 셀렉트). 직장명 마스킹 시 상세에 "OO (사명 비공개)"로 표시, 비마스킹 시 "업계" 행 별도 표시. 공유 페이지(/s)에도 업계 행 추가 (회사명은 여전히 미노출)
+3. **사진 편집 강화**: ① `PATCH /api/photos` `{id, action:"setMain"}` — 대표사진 변경 (트랜잭션으로 단일 대표 보장), PhotoUploader에 "대표로 설정" 버튼 ② 프로필 상세에 "🖼 사진" 버튼 → `/p/[id]/edit?step=photo` 로 사진 단계 직행 (`ProfileForm.startAtPhotos`)
+
+### 메모
+- 기존 프로필은 industry가 null — 수정 화면 진입 시 선택 강제됨 (zod 필수)
+- migration `6_industry_relation` 프로덕션 적용 완료
+
+---
+
 ## 2026-07-05 (3차) — 비가입자 공유 링크 + 중매인 모드 안내 (migration 5_share, 배포 완료)
 
 ### 사용자 요구 → 조치

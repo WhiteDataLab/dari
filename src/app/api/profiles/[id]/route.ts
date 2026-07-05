@@ -161,6 +161,7 @@ export async function PATCH(
         areaGugun: d.areaGugun,
         company: d.company.trim(),
         companyMasked: !!d.companyMasked,
+        industry: d.industry,
         jobTitle: d.jobTitle.trim(),
         religion: d.religion,
         drinking: d.drinking,

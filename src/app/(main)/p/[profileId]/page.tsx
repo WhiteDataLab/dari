@@ -89,7 +89,11 @@ export default async function ProfileDetailPage({
     ["흡연", SMOKE_LABEL[profile.smoking] ?? profile.smoking],
     ["돌싱", profile.isDivorced ? "예" : "아니요"],
     ...(profile.mbti ? ([["MBTI", profile.mbti]] as [string, string][]) : []),
-    ["직장", profile.companyMasked ? "비공개" : profile.company],
+    // 직장명을 숨겨도 업계는 보여준다 (§7.1)
+    ["직장", profile.companyMasked ? (profile.industry ? `${profile.industry} (사명 비공개)` : "비공개") : profile.company],
+    ...(profile.industry && !profile.companyMasked
+      ? ([["업계", profile.industry]] as [string, string][])
+      : []),
     ["직무", profile.jobTitle],
   ];
 
@@ -107,6 +111,12 @@ export default async function ProfileDetailPage({
             {profile.status === "ACTIVE" && (
               <ShareProfileButton profileId={profile.id} nickname={profile.nickname} />
             )}
+            <Link
+              href={`/p/${profile.id}/edit?step=photo`}
+              className="flex h-10 items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-sub shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
+            >
+              🖼 사진
+            </Link>
             <Link
               href={`/p/${profile.id}/edit`}
               className="flex h-10 items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-sub shadow-[0_2px_12px_rgba(28,27,24,0.06)]"

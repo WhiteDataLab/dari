@@ -43,6 +43,21 @@ export function PhotoUploader({
     if (res.ok) setPhotos((prev) => prev.filter((p) => p.id !== id));
   }
 
+  // 대표사진 변경 — 선택한 사진을 맨 앞으로
+  async function setMain(id: string) {
+    const res = await fetch("/api/photos", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action: "setMain" }),
+    });
+    if (res.ok) {
+      setPhotos((prev) => {
+        const target = prev.find((p) => p.id === id);
+        return target ? [target, ...prev.filter((p) => p.id !== id)] : prev;
+      });
+    }
+  }
+
   return (
     <div>
       <div className="grid grid-cols-3 gap-2">
@@ -61,6 +76,14 @@ export function PhotoUploader({
             >
               ✕
             </button>
+            {i !== 0 && (
+              <button
+                onClick={() => setMain(p.id)}
+                className="absolute bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-extrabold text-white"
+              >
+                대표로 설정
+              </button>
+            )}
           </div>
         ))}
         {photos.length < 10 && (

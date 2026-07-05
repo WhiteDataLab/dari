@@ -21,6 +21,7 @@ export const profileFieldsSchema = z.object({
   areaGugun: z.string().min(1).max(20),
   company: z.string().min(1).max(50),
   companyMasked: z.boolean().optional(),
+  industry: z.string().min(1).max(30), // 산업 분야 — 직장명 숨겨도 업계는 노출
   jobTitle: z.string().min(1).max(50),
   religion: z.nativeEnum(Religion),
   drinking: z.nativeEnum(DrinkingHabit),

@@ -22,6 +22,7 @@ enum RelationType {
   SENIOR // 선배
   JUNIOR // 후배
   COUSIN // 사촌
+  FRIEND_OF_FRIEND // 지인의 지인 (미가입 지인을 거친 대리 등록, 촌수 +2)
   ETC // 기타
   SELF // 본인 (Profile.relationToOwner 전용)
 }
@@ -199,6 +200,7 @@ model Profile {
   areaGugun          String
   company            String
   companyMasked      Boolean       @default(false)
+  industry           String? // 산업 분야 — 직장명을 숨겨도 업계는 보이게 (신규 프로필 필수)
   jobTitle           String
   religion           Religion
   drinking           DrinkingHabit

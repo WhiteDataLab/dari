@@ -86,6 +86,7 @@ export default async function SharedProfilePage({
     ["종교", RELIGION_LABEL[profile.religion] ?? profile.religion],
     ["음주", DRINK_LABEL[profile.drinking] + (profile.drinkCapacity ? ` (${profile.drinkCapacity})` : "")],
     ["흡연", SMOKE_LABEL[profile.smoking] ?? profile.smoking],
+    ...(profile.industry ? ([["업계", profile.industry]] as [string, string][]) : []),
     ["직무", profile.jobTitle],
     ...(profile.mbti ? ([["MBTI", profile.mbti]] as [string, string][]) : []),
   ];

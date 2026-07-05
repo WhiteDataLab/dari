@@ -6,7 +6,8 @@ import { PhotoUploader } from "@/components/PhotoUploader";
 
 const RELATIONS = [
   ["FRIEND", "지인"], ["FAMILY", "가족"], ["COWORKER", "직장동료"],
-  ["SENIOR", "선배"], ["JUNIOR", "후배"], ["COUSIN", "사촌"], ["ETC", "기타"],
+  ["SENIOR", "선배"], ["JUNIOR", "후배"], ["COUSIN", "사촌"],
+  ["FRIEND_OF_FRIEND", "지인의 지인"], ["ETC", "기타"],
 ] as const;
 const BODY_TYPES = [
   ["SLIM", "마른"], ["SLENDER", "슬림"], ["NORMAL", "보통"],
@@ -29,6 +30,11 @@ const HOBBY_PRESETS = [
 const MBTI = [
   "ISTJ", "ISFJ", "INFJ", "INTJ", "ISTP", "ISFP", "INFP", "INTP",
   "ESTP", "ESFP", "ENFP", "ENTP", "ESTJ", "ESFJ", "ENFJ", "ENTJ",
+];
+const INDUSTRIES = [
+  "IT·인터넷", "금융·보험", "제조·생산", "의료·제약", "교육", "공공·행정",
+  "법률·회계", "미디어·콘텐츠", "유통·물류", "건설·부동산", "서비스·외식",
+  "패션·뷰티", "여행·항공", "스포츠·레저", "연구·개발", "기타",
 ];
 
 function Chip({
@@ -59,6 +65,7 @@ export type ProfileInitial = {
   areaGugun: string;
   company: string;
   companyMasked: boolean;
+  industry: string | null;
   avoidSameCompany: boolean;
   jobTitle: string;
   religion: string;
@@ -79,11 +86,13 @@ export function ProfileForm({
   editId,
   initial,
   initialPhotos = [],
+  startAtPhotos = false,
 }: {
   isSelf: boolean;
   editId?: string;
   initial?: ProfileInitial;
   initialPhotos?: { id: string; url: string }[];
+  startAtPhotos?: boolean; // 수정 모드에서 사진 단계로 바로 진입
 }) {
   const router = useRouter();
   const isEdit = !!editId;
@@ -91,7 +100,7 @@ export function ProfileForm({
     isSelf || isEdit
       ? ["기본 정보", "라이프스타일", "어필", "사진"]
       : ["관계 & 동의", "기본 정보", "라이프스타일", "어필", "사진"];
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(isEdit && startAtPhotos ? steps.indexOf("사진") : 0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(editId ?? null);
@@ -112,6 +121,7 @@ export function ProfileForm({
   const [areaGugun, setAreaGugun] = useState(initial?.areaGugun ?? "");
   const [company, setCompany] = useState(initial?.company ?? "");
   const [companyMasked, setCompanyMasked] = useState(initial?.companyMasked ?? false);
+  const [industry, setIndustry] = useState(initial?.industry ?? "");
   const [avoidSameCompany, setAvoidSameCompany] = useState(initial?.avoidSameCompany ?? true);
   const [jobTitle, setJobTitle] = useState(initial?.jobTitle ?? "");
 
@@ -149,7 +159,7 @@ export function ProfileForm({
       if (!consent) return "당사자 동의 확인이 필요해요";
     }
     if (stepKey === "기본 정보") {
-      if (!gender || !birthYear || !heightCm || !bodyType || !areaSido || !areaGugun || !company || !jobTitle)
+      if (!gender || !birthYear || !heightCm || !bodyType || !areaSido || !areaGugun || !company || !industry || !jobTitle)
         return "모든 항목을 채워 주세요";
       if (!isEdit) {
         // 이름·연락처는 최초 등록 시에만 입력 (수정 모드에선 잠금)
@@ -181,7 +191,7 @@ export function ProfileForm({
         gender,
         birthYear: Number(birthYear),
         heightCm: Number(heightCm),
-        bodyType, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
+        bodyType, areaSido, areaGugun, company, companyMasked, industry, avoidSameCompany, jobTitle,
         religion, drinking,
         drinkCapacity: drinkCapacity || null,
         smoking,
@@ -312,6 +322,14 @@ export function ProfileForm({
             <input type="checkbox" checked={companyMasked} onChange={(e) => setCompanyMasked(e.target.checked)} className="h-4 w-4 accent-[#3182F6]" />
             프로필에는 직장명을 숨길래요
           </label>
+          <p className={label}>
+            산업 분야{" "}
+            <span className="font-medium text-sub">(직장명을 숨겨도 업계는 보여요)</span>
+          </p>
+          <select value={industry} onChange={(e) => setIndustry(e.target.value)} className={input}>
+            <option value="">선택</option>
+            {INDUSTRIES.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
           <label className="mt-2 flex items-center gap-2 text-[13px] font-medium text-sub">
             <input type="checkbox" checked={avoidSameCompany} onChange={(e) => setAvoidSameCompany(e.target.checked)} className="h-4 w-4 accent-[#3182F6]" />
             같은 회사 사람과는 서로 안 보이게 할래요 (권장)

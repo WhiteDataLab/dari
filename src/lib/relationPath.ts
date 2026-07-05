@@ -12,6 +12,7 @@ export const REL_LABEL: Record<RelationType, string> = {
   SENIOR: "선배",
   JUNIOR: "후배",
   COUSIN: "사촌",
+  FRIEND_OF_FRIEND: "지인의 지인",
   ETC: "지인",
   SELF: "본인",
 };
@@ -123,7 +124,8 @@ export async function computeRelationPath(
     sentence = `${parts.join("의 ")}의 ${lastRel}`;
     // 당사자 실명은 성사 전 비공개 — 닉네임으로 표시
     nodes.push({ name: profile.nickname, rel: lastRel! });
-    degree = rows[0].depth + 1;
+    // "지인의 지인"은 미가입 지인을 한 명 거치므로 촌수 2칸
+    degree = rows[0].depth + (profile.relationToOwner === "FRIEND_OF_FRIEND" ? 2 : 1);
   }
 
   if (degree > 6) {

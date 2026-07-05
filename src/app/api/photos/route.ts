@@ -59,6 +59,35 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, photo: { id: photo.id, url: photo.url } });
 }
 
+// PATCH /api/photos — { id, action: "setMain" } 대표사진 변경
+export async function PATCH(req: Request) {
+  const userId = await requireUserId();
+  if (!userId) return NextResponse.json({ error: "로그인이 필요해요" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  if (typeof body.id !== "string" || body.action !== "setMain") {
+    return NextResponse.json({ error: "잘못된 요청이에요" }, { status: 400 });
+  }
+
+  const photo = await prisma.profilePhoto.findUnique({
+    where: { id: body.id },
+    include: { profile: { select: { ownerId: true, userId: true, ownerCanEdit: true } } },
+  });
+  if (!photo || !canEditProfile(userId, photo.profile)) {
+    return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
+  }
+
+  await prisma.$transaction([
+    prisma.profilePhoto.updateMany({
+      where: { profileId: photo.profileId },
+      data: { isMain: false },
+    }),
+    prisma.profilePhoto.update({ where: { id: photo.id }, data: { isMain: true } }),
+  ]);
+
+  return NextResponse.json({ ok: true });
+}
+
 // DELETE /api/photos?id=...
 export async function DELETE(req: Request) {
   const userId = await requireUserId();

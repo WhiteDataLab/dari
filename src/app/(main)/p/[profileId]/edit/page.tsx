@@ -16,12 +16,15 @@ function formatPhone(digits: string): string {
 // 프로필 수정 — 당사자(본인/클레임) 또는 편집 권한 있는 등록자만
 export default async function ProfileEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ profileId: string }>;
+  searchParams: Promise<{ step?: string }>;
 }) {
   const session = await auth();
   const userId = session!.user.id;
   const { profileId } = await params;
+  const { step } = await searchParams;
 
   const profile = await prisma.profile.findUnique({
     where: { id: profileId },
@@ -52,6 +55,7 @@ export default async function ProfileEditPage({
         areaGugun: profile.areaGugun,
         company: profile.company,
         companyMasked: profile.companyMasked,
+        industry: profile.industry,
         avoidSameCompany: profile.avoidSameCompany,
         jobTitle: profile.jobTitle,
         religion: profile.religion,
@@ -66,6 +70,7 @@ export default async function ProfileEditPage({
         recommenderComment: profile.recommenderComment,
       }}
       initialPhotos={profile.photos.map((p) => ({ id: p.id, url: p.url }))}
+      startAtPhotos={step === "photo"}
     />
   );
 }
