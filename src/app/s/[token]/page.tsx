@@ -19,14 +19,16 @@ const RELIGION_LABEL: Record<string, string> = {
 const DRINK_LABEL: Record<string, string> = { NEVER: "안 함", SOMETIMES: "가끔", OFTEN: "즐김" };
 const SMOKE_LABEL: Record<string, string> = { NON_SMOKER: "비흡연", E_CIGARETTE: "전자담배", SMOKER: "흡연" };
 
+// 토큰 2종: shareToken(프로필만) / sharePhotoToken(사진 포함) — 공유자가 선택 발급 (§7.7)
 async function getProfile(token: string) {
-  return prisma.profile.findUnique({
-    where: { shareToken: token },
+  const profile = await prisma.profile.findFirst({
+    where: { OR: [{ shareToken: token }, { sharePhotoToken: token }] },
     include: {
       photos: { orderBy: [{ isMain: "desc" }, { sortOrder: "asc" }] },
       owner: { select: { referralCode: true } },
     },
   });
+  return profile ? { profile, photosIncluded: profile.sharePhotoToken === token } : null;
 }
 
 export async function generateMetadata({
@@ -35,8 +37,9 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  const profile = await getProfile(token);
-  if (!profile || profile.status !== "ACTIVE") return { title: "다리 — 지인의 지인, 어쩌면 인연" };
+  const found = await getProfile(token);
+  if (!found || found.profile.status !== "ACTIVE") return { title: "다리 — 지인의 지인, 어쩌면 인연" };
+  const { profile, photosIncluded } = found;
   const age = new Date().getFullYear() - profile.birthYear + 1;
   return {
     title: `다리 — ${profile.nickname} (${age})`,
@@ -46,7 +49,9 @@ export async function generateMetadata({
     openGraph: {
       title: `${profile.nickname}님을 소개해요 🧵`,
       description: profile.recommenderComment ?? "지인이 보증하는 소개팅, 다리",
-      // 사진은 성별 무관 비공개 (§9.0 v1.5) — OG 이미지 미포함
+      // 사진 포함 링크일 때만 OG 이미지 (§7.7)
+      images:
+        photosIncluded && profile.photos[0] ? [{ url: profile.photos[0].url }] : undefined,
     },
   };
 }
@@ -57,8 +62,9 @@ export default async function SharedProfilePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const profile = await getProfile(token);
-  if (!profile) notFound();
+  const found = await getProfile(token);
+  if (!found) notFound();
+  const { profile, photosIncluded } = found;
 
   if (profile.status !== "ACTIVE") {
     return (
@@ -97,24 +103,39 @@ export default async function SharedProfilePage({
       </header>
 
       <div className="mx-5">
-        {/* 사진은 성별 무관 비공개 — 성별 색상 카드 뒷면 (§9.0 v1.5) */}
-        <div
-          className={`relative flex aspect-[4/3.2] flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border-[3px] ${
-            profile.gender === "MALE"
-              ? "border-[#3B6BAD] bg-gradient-to-br from-[#2C4E80] via-[#3B6BAD] to-[#1D3557]"
-              : "border-[#D67F9D] bg-gradient-to-br from-[#B85C79] via-[#D67F9D] to-[#8E3B58]"
-          }`}
-        >
-          <div className="absolute inset-3 rounded-2xl border-[1.5px] border-dashed border-white/20" />
-          <span className="text-[46px]">
-            {profile.photos.length > 0 ? "🃏" : profile.gender === "MALE" ? "🙋‍♂️" : "🙋‍♀️"}
-          </span>
-          <p className="px-8 text-center text-[13px] font-bold text-white/80">
-            {profile.photos.length > 0
-              ? `사진 ${profile.photos.length}장 — 다리에서 서로 사진 교환을 수락하면 공개돼요`
-              : "📷 사진 미등록 프로필이에요"}
-          </p>
-        </div>
+        {photosIncluded && profile.photos.length > 0 ? (
+          // 사진 포함 공유 링크 — 공유자가 선택한 경우에만 (§7.7)
+          <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto">
+            {profile.photos.map((p) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={p.id}
+                src={p.url}
+                alt=""
+                className="aspect-[4/4.6] w-full flex-shrink-0 snap-center rounded-3xl object-cover shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
+              />
+            ))}
+          </div>
+        ) : (
+          // 프로필만 공유 — 성별 색상 카드 뒷면 (§9.0 v1.5)
+          <div
+            className={`relative flex aspect-[4/3.2] flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border-[3px] ${
+              profile.gender === "MALE"
+                ? "border-[#3B6BAD] bg-gradient-to-br from-[#2C4E80] via-[#3B6BAD] to-[#1D3557]"
+                : "border-[#D67F9D] bg-gradient-to-br from-[#B85C79] via-[#D67F9D] to-[#8E3B58]"
+            }`}
+          >
+            <div className="absolute inset-3 rounded-2xl border-[1.5px] border-dashed border-white/20" />
+            <span className="text-[46px]">
+              {profile.photos.length > 0 ? "🃏" : profile.gender === "MALE" ? "🙋‍♂️" : "🙋‍♀️"}
+            </span>
+            <p className="px-8 text-center text-[13px] font-bold text-white/80">
+              {profile.photos.length > 0
+                ? `사진 ${profile.photos.length}장 — 다리에서 서로 사진 교환을 수락하면 공개돼요`
+                : "📷 사진 미등록 프로필이에요"}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="px-6 pt-4">

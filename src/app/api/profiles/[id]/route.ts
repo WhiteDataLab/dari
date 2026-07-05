@@ -249,21 +249,29 @@ export async function PATCH(
   }
 
   // 비가입자 공유 링크 발급 (/s/[token]) — 편집 가능자만, 노출 중 프로필만
+  // body.photos: true → 사진 포함 링크, false/미지정 → 프로필만 (각각 별도 토큰)
   if (body.action === "share") {
     if (profile.status !== "ACTIVE" || profile.identityPending) {
       return NextResponse.json({ error: "정보 입력이 완료된, 노출 중인 프로필만 공유할 수 있어요" }, { status: 400 });
     }
-    let token = profile.shareToken;
+    const withPhotos = !!body.photos;
+    let token = withPhotos ? profile.sharePhotoToken : profile.shareToken;
     if (!token) {
       token = crypto.randomBytes(16).toString("hex");
-      await prisma.profile.update({ where: { id }, data: { shareToken: token } });
+      await prisma.profile.update({
+        where: { id },
+        data: withPhotos ? { sharePhotoToken: token } : { shareToken: token },
+      });
     }
-    return NextResponse.json({ ok: true, token });
+    return NextResponse.json({ ok: true, token, photos: withPhotos });
   }
 
-  // 공유 링크 회수 — 기존 링크 즉시 무효화
+  // 공유 링크 회수 — 두 종류 모두 즉시 무효화
   if (body.action === "unshare") {
-    await prisma.profile.update({ where: { id }, data: { shareToken: null } });
+    await prisma.profile.update({
+      where: { id },
+      data: { shareToken: null, sharePhotoToken: null },
+    });
     return NextResponse.json({ ok: true });
   }
 

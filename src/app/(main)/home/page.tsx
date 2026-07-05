@@ -66,6 +66,15 @@ export default async function HomePage() {
   const ctx = await getViewerContext(userId);
   const profiles = await filterVisibleProfiles(ctx, candidates);
 
+  // 열람 기록 — 아직 안 뽑아본 카드에 NEW 마크 (§9.0)
+  const viewed = profiles.length
+    ? await prisma.profileView.findMany({
+        where: { userId, profileId: { in: profiles.map((p) => p.id) } },
+        select: { profileId: true },
+      })
+    : [];
+  const viewedSet = new Set(viewed.map((v) => v.profileId));
+
   // 사진은 성별 무관 비공개 (§9.0 v1.5) — 피드는 카드 뒷면 + 텍스트 프로필만
   const cards = await Promise.all(
     profiles.map(async (p) => {
@@ -74,12 +83,14 @@ export default async function HomePage() {
         id: p.id,
         name: p.nickname, // 성사 전 실명 비공개 (PROJECT_SPEC §7.6)
         age: new Date().getFullYear() - p.birthYear + 1,
+        birthYear: p.birthYear,
         area: `${p.areaSido} ${p.areaGugun}`,
         job: p.jobTitle,
         comment: p.recommenderComment,
         degree: path && !path.far ? path.degree : null,
         gender: p.gender,
         hasPhotos: p._count.photos > 0,
+        isNew: !viewedSet.has(p.id),
       };
     }),
   );

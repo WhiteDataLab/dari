@@ -238,7 +238,8 @@ model Profile {
 
   avoidSameCompany Boolean @default(true) // 같은 회사 상호 비노출
 
-  shareToken String? @unique // 비가입자 공유 링크 토큰 (/s/[token]) — 닉네임 기준 공개 페이지
+  shareToken      String? @unique // 비가입자 공유 링크 (사진 미포함) — /s/[token]
+  sharePhotoToken String? @unique // 비가입자 공유 링크 (사진 포함) — 공유자가 선택 발급
 
   status ProfileStatus @default(ACTIVE)
 
@@ -259,6 +260,17 @@ model Profile {
   @@index([status, gender])
   @@index([phoneHash])
   @@index([viaPhoneHash])
+}
+
+// 탐색 카드 열람 기록 — NEW 마크 판정용 (FK 없이 소프트 참조)
+model ProfileView {
+  id        String   @id @default(cuid())
+  userId    String
+  profileId String
+  viewedAt  DateTime @default(now())
+
+  @@unique([userId, profileId])
+  @@index([profileId])
 }
 
 model ProfilePhoto {

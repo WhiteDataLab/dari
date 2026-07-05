@@ -57,6 +57,7 @@ export async function DELETE() {
         viaPhoneHash: null,
         identityPending: false,
         shareToken: null,
+        sharePhotoToken: null,
         company: "",
         idealType: null,
         loveView: null,
@@ -79,6 +80,9 @@ export async function DELETE() {
     }),
     prisma.contactBlock.deleteMany({ where: { userId } }),
     prisma.companyBlock.deleteMany({ where: { userId } }),
+    prisma.profileView.deleteMany({
+      where: { OR: [{ userId }, { profileId: { in: profileIds } }] },
+    }),
     prisma.notification.deleteMany({ where: { userId } }),
     prisma.emailVerification.deleteMany({ where: { email: user.email } }),
     // 계정 익명화 — 이메일 무효화로 재로그인 차단, 경로에는 "지인"으로만 표시

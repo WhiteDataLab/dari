@@ -84,6 +84,17 @@ export default async function ProfileDetailPage({
   }
   if (profile.status === "MATCHED" && mode !== "matched") mode = "none";
 
+  // 열람 기록 (NEW 마크 해제) — 직접 링크로 들어온 경우도 커버
+  if (!isMine && !isAdmin) {
+    await prisma.profileView
+      .upsert({
+        where: { userId_profileId: { userId, profileId } },
+        create: { userId, profileId },
+        update: {},
+      })
+      .catch(() => {});
+  }
+
   const photosVisible = await canViewPhotos(userId, profile);
   const path = await computeRelationPath(userId, profile).catch(() => null);
   const age = new Date().getFullYear() - profile.birthYear + 1;
