@@ -10,7 +10,7 @@ export default async function AvoidPage() {
   const userId = session!.user.id;
 
   const self = await prisma.profile.findFirst({
-    where: { userId, isSelf: true },
+    where: { userId },
     select: { id: true, avoidSameCompany: true },
   });
 

@@ -12,9 +12,13 @@ export default async function HomePage() {
   const userId = session!.user.id;
 
   const [myProfiles, viewerSelf] = await Promise.all([
-    prisma.profile.findMany({ where: { ownerId: userId }, select: { id: true } }),
+    // 내가 등록한 프로필 + 클레임 연동된 내 프로필 (거절 이력 제외 계산용)
+    prisma.profile.findMany({
+      where: { OR: [{ ownerId: userId }, { userId }] },
+      select: { id: true },
+    }),
     prisma.profile.findFirst({
-      where: { userId, isSelf: true },
+      where: { userId },
       include: { _count: { select: { photos: true } } },
     }),
   ]);

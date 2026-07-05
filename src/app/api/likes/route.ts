@@ -15,9 +15,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "잘못된 요청이에요" }, { status: 400 });
   }
 
-  // 발신 프로필 = 내 본인 프로필 (호감 전송은 프로필 완성이 선행 조건)
+  // 발신 프로필 = 내 본인 프로필 (직접 생성 or 클레임 연동, 프로필 완성이 선행 조건)
   const fromProfile = await prisma.profile.findFirst({
-    where: { userId, isSelf: true },
+    where: { userId },
     include: { _count: { select: { photos: true } } },
   });
   if (!fromProfile) {

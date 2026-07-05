@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { uploadProfilePhoto, deletePhotoByUrl } from "@/lib/storage";
+import { canEditProfile } from "@/lib/profileAccess";
 
 const MAX_PHOTOS = 10;
 
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     where: { id: profileId },
     include: { _count: { select: { photos: true } } },
   });
-  if (!profile || profile.ownerId !== userId) {
+  if (!profile || !canEditProfile(userId, profile)) {
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
   if (profile._count.photos >= MAX_PHOTOS) {
@@ -68,9 +69,9 @@ export async function DELETE(req: Request) {
 
   const photo = await prisma.profilePhoto.findUnique({
     where: { id },
-    include: { profile: { select: { ownerId: true } } },
+    include: { profile: { select: { ownerId: true, userId: true, ownerCanEdit: true } } },
   });
-  if (!photo || photo.profile.ownerId !== userId) {
+  if (!photo || !canEditProfile(userId, photo.profile)) {
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
 

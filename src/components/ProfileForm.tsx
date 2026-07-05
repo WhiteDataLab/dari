@@ -47,16 +47,54 @@ function Chip({
   );
 }
 
-// 본인/지인 공용 다단계 프로필 폼 (PAGE_IA §2.7)
-export function ProfileForm({ isSelf }: { isSelf: boolean }) {
+// 수정 모드 초기값 (서버에서 복호화된 phone 포함)
+export type ProfileInitial = {
+  name: string;
+  gender: "MALE" | "FEMALE";
+  birthYear: number;
+  heightCm: number;
+  bodyType: string;
+  phone: string;
+  areaSido: string;
+  areaGugun: string;
+  company: string;
+  companyMasked: boolean;
+  avoidSameCompany: boolean;
+  jobTitle: string;
+  religion: string;
+  drinking: string;
+  drinkCapacity: string | null;
+  smoking: string;
+  isDivorced: boolean;
+  mbti: string | null;
+  hobbies: string[];
+  idealType: string | null;
+  loveView: string | null;
+  recommenderComment: string | null;
+};
+
+// 본인/지인 공용 다단계 프로필 폼 (PAGE_IA §2.7) — editId가 있으면 수정 모드
+export function ProfileForm({
+  isSelf,
+  editId,
+  initial,
+  initialPhotos = [],
+}: {
+  isSelf: boolean;
+  editId?: string;
+  initial?: ProfileInitial;
+  initialPhotos?: { id: string; url: string }[];
+}) {
   const router = useRouter();
-  const steps = isSelf
-    ? ["기본 정보", "라이프스타일", "어필", "사진"]
-    : ["관계 & 동의", "기본 정보", "라이프스타일", "어필", "사진"];
+  const isEdit = !!editId;
+  const steps =
+    isSelf || isEdit
+      ? ["기본 정보", "라이프스타일", "어필", "사진"]
+      : ["관계 & 동의", "기본 정보", "라이프스타일", "어필", "사진"];
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(editId ?? null);
 
   // STEP: 관계 & 동의 (대리 등록만)
   const [relation, setRelation] = useState<string | null>(null);
@@ -64,33 +102,33 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
   const [delegateConsent, setDelegateConsent] = useState(false);
 
   // 기본 정보
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | null>(null);
-  const [birthYear, setBirthYear] = useState("");
-  const [heightCm, setHeightCm] = useState("");
-  const [bodyType, setBodyType] = useState<string | null>(null);
-  const [phone, setPhone] = useState("");
-  const [areaSido, setAreaSido] = useState("");
-  const [areaGugun, setAreaGugun] = useState("");
-  const [company, setCompany] = useState("");
-  const [companyMasked, setCompanyMasked] = useState(false);
-  const [avoidSameCompany, setAvoidSameCompany] = useState(true);
-  const [jobTitle, setJobTitle] = useState("");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | null>(initial?.gender ?? null);
+  const [birthYear, setBirthYear] = useState(initial ? String(initial.birthYear) : "");
+  const [heightCm, setHeightCm] = useState(initial ? String(initial.heightCm) : "");
+  const [bodyType, setBodyType] = useState<string | null>(initial?.bodyType ?? null);
+  const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [areaSido, setAreaSido] = useState(initial?.areaSido ?? "");
+  const [areaGugun, setAreaGugun] = useState(initial?.areaGugun ?? "");
+  const [company, setCompany] = useState(initial?.company ?? "");
+  const [companyMasked, setCompanyMasked] = useState(initial?.companyMasked ?? false);
+  const [avoidSameCompany, setAvoidSameCompany] = useState(initial?.avoidSameCompany ?? true);
+  const [jobTitle, setJobTitle] = useState(initial?.jobTitle ?? "");
 
   // 라이프스타일
-  const [religion, setReligion] = useState<string | null>(null);
-  const [drinking, setDrinking] = useState<string | null>(null);
-  const [drinkCapacity, setDrinkCapacity] = useState("");
-  const [smoking, setSmoking] = useState<string | null>(null);
-  const [isDivorced, setIsDivorced] = useState<boolean | null>(null);
-  const [mbti, setMbti] = useState("");
-  const [hobbies, setHobbies] = useState<string[]>([]);
+  const [religion, setReligion] = useState<string | null>(initial?.religion ?? null);
+  const [drinking, setDrinking] = useState<string | null>(initial?.drinking ?? null);
+  const [drinkCapacity, setDrinkCapacity] = useState(initial?.drinkCapacity ?? "");
+  const [smoking, setSmoking] = useState<string | null>(initial?.smoking ?? null);
+  const [isDivorced, setIsDivorced] = useState<boolean | null>(initial?.isDivorced ?? null);
+  const [mbti, setMbti] = useState(initial?.mbti ?? "");
+  const [hobbies, setHobbies] = useState<string[]>(initial?.hobbies ?? []);
   const [customHobby, setCustomHobby] = useState("");
 
   // 어필
-  const [comment, setComment] = useState("");
-  const [idealType, setIdealType] = useState("");
-  const [loveView, setLoveView] = useState("");
+  const [comment, setComment] = useState(initial?.recommenderComment ?? "");
+  const [idealType, setIdealType] = useState(initial?.idealType ?? "");
+  const [loveView, setLoveView] = useState(initial?.loveView ?? "");
 
   const yearNow = new Date().getFullYear();
   const years = Array.from({ length: 1996 - 1960 + 20 }, (_, i) => yearNow - 20 - i).filter(
@@ -131,35 +169,44 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
     setError("");
 
     if (stepKey === "어필") {
-      // 프로필 생성 → 사진 단계로
+      // 저장 (생성 or 수정) → 사진 단계로
       setLoading(true);
-      const res = await fetch("/api/profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          isSelf,
-          relationToOwner: isSelf ? "SELF" : relation,
-          consentConfirmed: consent,
-          delegatePhotoConsent: delegateConsent,
-          name, gender,
-          birthYear: Number(birthYear),
-          heightCm: Number(heightCm),
-          bodyType, phone, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
-          religion, drinking,
-          drinkCapacity: drinkCapacity || null,
-          smoking,
-          isDivorced: !!isDivorced,
-          mbti: mbti || null,
-          hobbies,
-          idealType: idealType || null,
-          loveView: loveView || null,
-          recommenderComment: comment || null,
-        }),
-      });
+      const fields = {
+        name, gender,
+        birthYear: Number(birthYear),
+        heightCm: Number(heightCm),
+        bodyType, phone, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
+        religion, drinking,
+        drinkCapacity: drinkCapacity || null,
+        smoking,
+        isDivorced: !!isDivorced,
+        mbti: mbti || null,
+        hobbies,
+        idealType: idealType || null,
+        loveView: loveView || null,
+        recommenderComment: comment || null,
+      };
+      const res = isEdit
+        ? await fetch(`/api/profiles/${editId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "update", fields }),
+          })
+        : await fetch("/api/profiles", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              isSelf,
+              relationToOwner: isSelf ? "SELF" : relation,
+              consentConfirmed: consent,
+              delegatePhotoConsent: delegateConsent,
+              ...fields,
+            }),
+          });
       const data = await res.json();
       setLoading(false);
       if (!res.ok) return setError(data.error ?? "저장에 실패했어요");
-      setProfileId(data.profileId);
+      if (!isEdit) setProfileId(data.profileId);
     }
     setStep((s) => s + 1);
   }
@@ -178,7 +225,7 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
         ))}
       </div>
       <h1 className="text-[20px] font-extrabold tracking-tight">
-        {isSelf ? "내 소개팅 프로필" : "지인 프로필 등록"} · {stepKey}
+        {isEdit ? "프로필 수정" : isSelf ? "내 소개팅 프로필" : "지인 프로필 등록"} · {stepKey}
       </h1>
 
       {stepKey === "관계 & 동의" && (
@@ -326,8 +373,10 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
         <div className="pt-4">
           <PhotoUploader
             profileId={profileId}
-            initialPhotos={[]}
-            onDone={() => router.push(isSelf ? "/home" : "/deck")}
+            initialPhotos={initialPhotos}
+            onDone={() =>
+              router.push(isEdit ? `/p/${editId}` : isSelf ? "/home" : "/deck")
+            }
           />
         </div>
       )}
@@ -336,7 +385,13 @@ export function ProfileForm({ isSelf }: { isSelf: boolean }) {
 
       {stepKey !== "사진" && (
         <button onClick={next} disabled={loading} className={btn}>
-          {loading ? "저장 중..." : stepKey === "어필" ? "저장하고 사진 등록 →" : "다음"}
+          {loading
+            ? "저장 중..."
+            : stepKey === "어필"
+              ? isEdit
+                ? "저장하고 사진 관리 →"
+                : "저장하고 사진 등록 →"
+              : "다음"}
         </button>
       )}
       {step > 0 && stepKey !== "사진" && (

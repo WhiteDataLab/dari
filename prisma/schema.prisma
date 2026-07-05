@@ -177,6 +177,11 @@ model Profile {
 
   relationToOwner RelationType // 등록자와의 관계 (isSelf면 SELF). 경로의 마지막 칸
 
+  // 대리 등록 당사자가 직접 가입하면 이름+연락처 일치 시 계정과 연동 (클레임)
+  claimedAt          DateTime? // 당사자 본인 계정 연동 시각 (userId가 함께 세팅됨)
+  ownerCanEdit       Boolean   @default(true) // 추천인(등록자) 편집 권한 — 클레임 후 당사자가 결정
+  editShareDecidedAt DateTime? // 편집 권한 공유 여부를 당사자가 결정한 시각
+
   // 대리 등록 시 당사자 동의 확인
   consentConfirmed     Boolean   @default(false)
   consentNotifiedAt    DateTime?
@@ -352,6 +357,8 @@ enum NotificationType {
   MATCH_CREATED
   VOUCH_REQUESTED
   PROFILE_REGISTERED_CONSENT // 대리 등록 당사자 통지
+  PROFILE_CLAIMED // 대리 등록 당사자가 직접 가입 → 프로필 연동 (추천인에게)
+  EDIT_SHARE_DECIDED // 당사자가 추천인 편집 권한 공유 여부를 결정 (추천인에게)
 }
 
 model Notification {

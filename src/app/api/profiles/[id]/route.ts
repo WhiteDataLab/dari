@@ -4,7 +4,10 @@ import { requireUserId } from "@/lib/session";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
-import { decryptPhone } from "@/lib/crypto";
+import { decryptPhone, encryptPhone, hashPhone } from "@/lib/crypto";
+import { canEditProfile } from "@/lib/profileAccess";
+import { profileFieldsSchema, checkProfileFreeText } from "@/lib/profileInput";
+import { notify } from "@/lib/notify";
 
 // GET /api/profiles/[id] — 상세 + 관계 경로 (phone 제외, 사진 gate 적용)
 export async function GET(
@@ -23,9 +26,9 @@ export async function GET(
     return NextResponse.json({ error: "프로필을 찾을 수 없어요" }, { status: 404 });
   }
 
-  // 거절 이력 상대는 404 (DB_SCHEMA §5-3)
+  // 거절 이력 상대는 404 (DB_SCHEMA §5-3) — 클레임된 내 프로필(소유자는 추천인)도 포함
   const myProfiles = await prisma.profile.findMany({
-    where: { ownerId: userId },
+    where: { OR: [{ ownerId: userId }, { userId }] },
     select: { id: true },
   });
   const myProfileIds = myProfiles.map((p) => p.id);
@@ -94,7 +97,8 @@ export async function GET(
   });
 }
 
-// PATCH /api/profiles/[id] — 수정 / 숨김 / 재공개 (소유자만)
+// PATCH /api/profiles/[id] — 수정 / 숨김 / 재공개 / 편집 권한 공유 결정
+// 권한: 당사자(userId 일치)는 항상, 등록자는 클레임 전 or 당사자가 편집을 허용한 경우
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -104,11 +108,73 @@ export async function PATCH(
 
   const { id } = await params;
   const profile = await prisma.profile.findUnique({ where: { id } });
-  if (!profile || profile.ownerId !== userId) {
+  if (!profile || !canEditProfile(userId, profile)) {
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));
+
+  // 클레임된 프로필의 당사자만: 추천인(등록자) 편집 권한 공유 여부 결정
+  if (body.action === "shareEdit") {
+    if (profile.userId !== userId || !profile.claimedAt) {
+      return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
+    }
+    const share = !!body.value;
+    await prisma.profile.update({
+      where: { id },
+      data: { ownerCanEdit: share, editShareDecidedAt: new Date() },
+    });
+    if (profile.ownerId !== userId) {
+      await notify(profile.ownerId, "EDIT_SHARE_DECIDED", {
+        profileId: id,
+        name: profile.name,
+        shared: share ? 1 : 0,
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // 전체 항목 수정 (본인 프로필 / 지인 프로필 공용)
+  if (body.action === "update") {
+    const parsed = profileFieldsSchema.safeParse(body.fields);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "입력값을 확인해 주세요" }, { status: 400 });
+    }
+    const d = parsed.data;
+    const violation = checkProfileFreeText(d);
+    if (violation) {
+      return NextResponse.json({ error: violation }, { status: 400 });
+    }
+    await prisma.profile.update({
+      where: { id },
+      data: {
+        name: d.name.trim(),
+        gender: d.gender,
+        birthYear: d.birthYear,
+        heightCm: d.heightCm,
+        bodyType: d.bodyType,
+        phone: encryptPhone(d.phone.replace(/-/g, "")),
+        phoneHash: hashPhone(d.phone),
+        avoidSameCompany: d.avoidSameCompany ?? profile.avoidSameCompany,
+        areaSido: d.areaSido,
+        areaGugun: d.areaGugun,
+        company: d.company.trim(),
+        companyMasked: !!d.companyMasked,
+        jobTitle: d.jobTitle.trim(),
+        religion: d.religion,
+        drinking: d.drinking,
+        drinkCapacity: d.drinking === "OFTEN" ? d.drinkCapacity : null,
+        smoking: d.smoking,
+        isDivorced: d.isDivorced,
+        mbti: d.mbti || null,
+        hobbies: d.hobbies,
+        idealType: d.idealType || null,
+        loveView: d.loveView || null,
+        recommenderComment: d.recommenderComment || null,
+      },
+    });
+    return NextResponse.json({ ok: true });
+  }
 
   if (body.action === "hide" || body.action === "show") {
     if (profile.status === "MATCHED") {

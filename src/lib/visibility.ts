@@ -26,7 +26,7 @@ export async function getViewerContext(userId: string): Promise<ViewerContext> {
       select: { company: true, phoneHash: true },
     }),
     prisma.profile.findFirst({
-      where: { userId, isSelf: true },
+      where: { userId },
       select: { avoidSameCompany: true },
     }),
     prisma.contactBlock.findMany({ where: { userId }, select: { phoneHash: true } }),

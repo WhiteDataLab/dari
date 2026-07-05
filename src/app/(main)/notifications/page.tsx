@@ -12,6 +12,8 @@ const TYPE_LABEL: Record<string, string> = {
   MATCH_CREATED: "🎉 매칭 성사! 번호가 공개됐어요",
   VOUCH_REQUESTED: "🙋 보증 요청이 도착했어요",
   PROFILE_REGISTERED_CONSENT: "📋 내 프로필이 등록됐어요",
+  PROFILE_CLAIMED: "🔗 등록한 지인이 직접 가입해서 프로필이 연결됐어요",
+  EDIT_SHARE_DECIDED: "✍️ 지인이 프로필 편집 권한을 결정했어요",
 };
 
 export default async function NotificationsPage() {

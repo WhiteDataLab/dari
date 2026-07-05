@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
+import { canEditProfile } from "@/lib/profileAccess";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function ProfileDetailPage({
   if (!profile || profile.status === "HIDDEN") notFound();
 
   const isMine = profile.ownerId === userId || profile.userId === userId;
+  const canEdit = canEditProfile(userId, profile);
 
   // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
   if (!isMine) {
@@ -42,7 +44,7 @@ export default async function ProfileDetailPage({
     if (!(await isProfileVisible(ctx, profile))) notFound();
   }
 
-  const mySelf = await prisma.profile.findFirst({ where: { userId, isSelf: true } });
+  const mySelf = await prisma.profile.findFirst({ where: { userId } });
 
   // 나(본인 프로필)와 이 프로필 사이의 진행 중 Like → CTA 모드 결정
   let mode: CtaMode = isMine ? "none" : "send";
@@ -97,6 +99,14 @@ export default async function ProfileDetailPage({
         >
           ←
         </Link>
+        {canEdit && (
+          <Link
+            href={`/p/${profile.id}/edit`}
+            className="flex h-10 items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-sub shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
+          >
+            ✏️ 수정
+          </Link>
+        )}
       </div>
 
       {/* 사진 — 비대칭 gate: 권한 없으면 서버가 URL 자체를 렌더하지 않음 */}

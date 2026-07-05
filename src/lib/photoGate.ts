@@ -14,7 +14,7 @@ export async function canViewPhotos(
 
   // 여성 열람자는 자유 열람 (중매인 포함 — 남성 중매인만 차단)
   const viewerSelf = await prisma.profile.findFirst({
-    where: { userId: viewerId, isSelf: true },
+    where: { userId: viewerId },
     select: { gender: true },
   });
   if (viewerSelf?.gender === "FEMALE") return true;

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { NavigationIndicator } from "@/components/NavigationIndicator";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto min-h-dvh max-w-[480px] bg-ivory shadow-[0_0_40px_rgba(0,0,0,0.08)]">
           {children}
         </div>
+        <NavigationIndicator />
       </body>
     </html>
   );

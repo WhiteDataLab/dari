@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { encryptPhone, generateReferralCode, hashPhone } from "@/lib/crypto";
 import { verifyEmailCode } from "@/lib/emailCode";
+import { notifyTx } from "@/lib/notify";
 import { RelationType } from "@prisma/client";
 
 // GET /api/signup — 첫 회원(운영자)인지 여부. 첫 회원은 추천코드 단계를 건너뛴다
@@ -64,16 +65,19 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
+  const name = data.name.trim();
+  const phoneHash = hashPhone(data.phone);
+
   // 트랜잭션 안에서 재확인 — 동시 가입으로 ADMIN이 2명 생기는 레이스 방지
-  const user = await prisma.$transaction(async (tx) => {
+  const { user, claimedProfileId } = await prisma.$transaction(async (tx) => {
     const countInTx = await tx.user.count();
-    return tx.user.create({
+    const user = await tx.user.create({
       data: {
         email,
         emailVerifiedAt: now,
-        name: data.name.trim(),
+        name,
         phone: encryptPhone(data.phone.replace(/-/g, "")),
-        phoneHash: hashPhone(data.phone),
+        phoneHash,
         birthDate: new Date(data.birthDate),
         company: data.company.trim(),
         referralCode: generateReferralCode(),
@@ -85,7 +89,25 @@ export async function POST(req: Request) {
         role: countInTx === 0 ? "ADMIN" : "MEMBER",
       },
     });
+
+    // 프로필 클레임 (PROJECT_SPEC §7.4): 지인이 대리 등록해 둔 프로필과
+    // 이름+연락처가 정확히 일치하면 새 계정에 연동 → 본인이 직접 편집 가능
+    const proxy = await tx.profile.findFirst({
+      where: { isSelf: false, userId: null, phoneHash, name },
+      orderBy: { createdAt: "asc" },
+    });
+    if (proxy) {
+      await tx.profile.update({
+        where: { id: proxy.id },
+        data: { userId: user.id, claimedAt: now },
+      });
+      await notifyTx(tx, proxy.ownerId, "PROFILE_CLAIMED", {
+        profileId: proxy.id,
+        name: proxy.name,
+      });
+    }
+    return { user, claimedProfileId: proxy?.id ?? null };
   });
 
-  return NextResponse.json({ ok: true, userId: user.id });
+  return NextResponse.json({ ok: true, userId: user.id, claimedProfileId });
 }

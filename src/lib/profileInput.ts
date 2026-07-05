@@ -1,0 +1,58 @@
+import { z } from "zod";
+import { checkFreeText } from "@/lib/moderation";
+import {
+  BodyType,
+  DrinkingHabit,
+  Gender,
+  RelationType,
+  Religion,
+  SmokingHabit,
+} from "@prisma/client";
+
+// 프로필 공통 입력 필드 — 생성(POST /api/profiles)과 수정(PATCH update)이 공유
+export const profileFieldsSchema = z.object({
+  name: z.string().min(1).max(30),
+  gender: z.nativeEnum(Gender),
+  birthYear: z.number().int().min(1960).max(2010),
+  heightCm: z.number().int().min(120).max(230),
+  bodyType: z.nativeEnum(BodyType),
+  phone: z.string().regex(/^01[016789]-?\d{3,4}-?\d{4}$/),
+  areaSido: z.string().min(1).max(20),
+  areaGugun: z.string().min(1).max(20),
+  company: z.string().min(1).max(50),
+  companyMasked: z.boolean().optional(),
+  jobTitle: z.string().min(1).max(50),
+  religion: z.nativeEnum(Religion),
+  drinking: z.nativeEnum(DrinkingHabit),
+  drinkCapacity: z.string().max(30).optional().nullable(),
+  smoking: z.nativeEnum(SmokingHabit),
+  isDivorced: z.boolean(),
+  mbti: z.string().max(4).optional().nullable(),
+  hobbies: z.array(z.string().max(15)).min(1).max(5),
+  idealType: z.string().max(200).optional().nullable(),
+  loveView: z.string().max(200).optional().nullable(),
+  recommenderComment: z.string().max(100).optional().nullable(),
+  avoidSameCompany: z.boolean().optional(),
+});
+
+export const profileCreateSchema = profileFieldsSchema.extend({
+  isSelf: z.boolean(),
+  relationToOwner: z.nativeEnum(RelationType),
+  consentConfirmed: z.boolean().optional(),
+  delegatePhotoConsent: z.boolean().optional(),
+});
+
+export type ProfileFields = z.infer<typeof profileFieldsSchema>;
+
+// 자유 텍스트 연락처 우회 감지 — 위반 필드가 있으면 에러 메시지 반환
+export function checkProfileFreeText(d: ProfileFields): string | null {
+  for (const [field, value] of [
+    ["이상형", d.idealType],
+    ["연애관", d.loveView],
+    ["한 줄 소개", d.recommenderComment],
+  ] as const) {
+    const violation = checkFreeText(value);
+    if (violation) return `${field}: ${violation}`;
+  }
+  return null;
+}

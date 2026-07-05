@@ -2,6 +2,33 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-05 — 사용자 테스트 피드백 4건 반영 (migration 3_claim, 배포 완료)
+
+### 사용자 피드백 → 조치
+1. **온보딩 "나중에 하기" 무반응**: 버튼 자체는 정상(`/home` Link)이었고, 원인은 **느린 서버 렌더링 동안 아무 피드백이 없던 것** (콜드스타트 + /home의 카드별 관계경로 재귀 CTE). 아래 2번으로 해결
+2. **메뉴 이동 중 피드백 없음**: 전역 `NavigationIndicator` 추가 — 내부 링크 클릭·뒤로가기 감지, **250ms 이상 걸리면 화면 가운데 "화면을 불러오는 중이에요…" 말풍선** 표시, 경로 변경 시 자동 숨김(failsafe 15초). `app/loading.tsx` + `app/(main)/loading.tsx` 스켈레톤도 추가 (탭 전환 시 즉시 표시)
+3. **지인 프로필 수정 불가**: 전체 항목 수정 구현 — `PATCH /api/profiles/[id]` `action:"update"` (zod 검증 + 연락처 우회 감지 + phone 재암호화), `/p/[id]/edit` 페이지 (ProfileForm 수정 모드: 초기값 프리필, 사진 관리 포함), 상세 페이지 우상단 "✏️ 수정" 버튼, MY>내 프로필에 "항목 수정하기" 링크
+4. **본인 직접 가입 시 대리 등록 프로필 연동 (클레임)**: 스펙 §7.4 신설
+   - 가입 시 이름+연락처(HMAC 해시) 정확 일치하는 미연동 대리 프로필 자동 연동 (`userId`+`claimedAt`), 추천인에게 `PROFILE_CLAIMED` 알림
+   - 온보딩/MY>내 프로필에서 당사자가 결정: "같이 수정"(`ownerCanEdit=true`) vs "나만 수정"(추천인 열람만) → `EDIT_SHARE_DECIDED` 알림
+   - 편집 권한 판정은 `src/lib/profileAccess.ts::canEditProfile` 단일 함수 (프로필 PATCH·사진 업로드/삭제·수정 페이지 공용)
+
+### 구조 변경
+- **"내 프로필" 조회 규칙 변경**: `{ userId, isSelf: true }` → `{ userId }` (8곳: home/likes/photoGate/visibility/session/me·avoid/me·profile/상세). `Profile.userId`가 unique라 의미 동일하며, 클레임된 프로필도 본인 프로필로 동작 (호감 전송, 사진 gate, 회피 설정)
+- 클레임된 계정은 본인 프로필 중복 생성 불가 (POST /api/profiles 409)
+- 피드·상세의 거절 이력 제외 계산에 클레임 프로필 포함 (`OR: [{ownerId}, {userId}]`)
+- 프로필 입력 zod 스키마를 `src/lib/profileInput.ts`로 분리 (생성/수정 공용)
+- migration `3_claim` 프로덕션 적용 완료: Profile.claimedAt/ownerCanEdit/editShareDecidedAt + NotificationType 2종
+
+### 검증
+- `npm run build` 통과. 로컬 프리뷰(3001): 랜딩/가입/로그인 렌더 정상, 이동 인디케이터가 느린 이동에서 표시 → 도착 시 소멸 확인, 빠른 이동(250ms 미만)에선 미표시(의도). 콘솔/서버 에러 0. 실데이터 미생성
+- `next lint`는 ESLint 미설정으로 대화형 프롬프트가 떠서 실행 불가 (별도 설정 필요 시 `npx @next/codemod@canary next-lint-to-eslint-cli .`)
+
+### 남은 일 / 메모
+- **/home 피드 성능**: 카드마다 관계경로 재귀 CTE 실행 (최대 60회) — 회원 늘면 느려짐. 배치 계산 or 캐싱 필요 (TODO(phase-2))
+- 클레임 시 동일인 대리 프로필이 2개 이상이면 최초 1개만 연동됨 (userId unique 제약)
+- 클레임 결정 전에는 추천인 편집 권한 유지 (기존 동작과 동일)
+
 ## 2026-07-04 (밤) — 전체 보안 감사 + 강화 (migration 2_security, 배포 완료)
 
 ### 감사 결과
