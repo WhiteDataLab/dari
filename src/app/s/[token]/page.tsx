@@ -46,10 +46,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${profile.nickname}님을 소개해요 🧵`,
       description: profile.recommenderComment ?? "지인이 보증하는 소개팅, 다리",
-      images:
-        profile.gender === "MALE" && profile.photos[0]
-          ? [{ url: profile.photos[0].url }]
-          : undefined,
+      // 사진은 성별 무관 비공개 (§9.0 v1.5) — OG 이미지 미포함
     },
   };
 }
@@ -77,7 +74,6 @@ export default async function SharedProfilePage({
   }
 
   const age = new Date().getFullYear() - profile.birthYear + 1;
-  const photosPublic = profile.gender === "MALE" && profile.photos.length > 0;
   const signupHref = `/signup?code=${profile.owner.referralCode}`;
 
   const infoRows: [string, string][] = [
@@ -101,28 +97,16 @@ export default async function SharedProfilePage({
       </header>
 
       <div className="mx-5">
-        {photosPublic ? (
-          <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto">
-            {profile.photos.map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={p.id}
-                src={p.url}
-                alt=""
-                className="aspect-[4/4.6] w-full flex-shrink-0 snap-center rounded-3xl object-cover shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex aspect-[4/4.6] flex-col items-center justify-center gap-2.5 rounded-3xl bg-gradient-to-br from-[#EEE9DF] to-[#DFD8C8]">
-            <span className="text-[70px] opacity-45 grayscale">👤</span>
-            <p className="px-8 text-center text-[13px] font-bold text-sub">
-              {profile.gender === "FEMALE"
-                ? "사진은 가입 후 매칭 과정에서 서로 수락하면 공개돼요"
-                : "아직 사진이 없어요"}
-            </p>
-          </div>
-        )}
+        {/* 사진은 성별 무관 비공개 — 카드 뒷면 스타일 (§9.0 v1.5) */}
+        <div className="relative flex aspect-[4/3.2] flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border-[3px] border-[#3A362E] bg-gradient-to-br from-[#2A2925] via-[#3A362E] to-[#211F1B]">
+          <div className="absolute inset-3 rounded-2xl border-[1.5px] border-dashed border-white/15" />
+          <span className="text-[46px]">🧵</span>
+          <p className="px-8 text-center text-[13px] font-bold text-white/75">
+            {profile.photos.length > 0
+              ? `사진 ${profile.photos.length}장 — 다리에서 서로 사진 교환을 수락하면 공개돼요`
+              : "아직 사진이 없어요"}
+          </p>
+        </div>
       </div>
 
       <div className="px-6 pt-4">

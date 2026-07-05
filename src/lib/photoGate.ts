@@ -1,23 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { Gender } from "@prisma/client";
 
-// 비대칭 사진 gate (PROJECT_SPEC §9.0, DB_SCHEMA §5-5)
-// 남성 사진: 전체 공개 / 여성 사진: PhotoAccess 보유자·여성·소유자만
+// 대칭 사진 gate (PROJECT_SPEC §9.0 v1.5)
+// 모든 사진은 성별 무관 비공개. 열람 가능: 본인/등록자, 사진 교환(EXCHANGE)·성사(MATCH) 열람권 보유자.
 // 권한 없으면 원본 URL을 아예 응답에서 제외한다 (CSS blur 금지)
 
 export async function canViewPhotos(
   viewerId: string,
   profile: { id: string; gender: Gender; ownerId: string; userId: string | null },
 ): Promise<boolean> {
-  if (profile.gender === "MALE") return true;
   if (profile.ownerId === viewerId || profile.userId === viewerId) return true;
-
-  // 여성 열람자는 자유 열람 (중매인 포함 — 남성 중매인만 차단)
-  const viewerSelf = await prisma.profile.findFirst({
-    where: { userId: viewerId },
-    select: { gender: true },
-  });
-  if (viewerSelf?.gender === "FEMALE") return true;
 
   const access = await prisma.photoAccess.findUnique({
     where: { profileId_viewerId: { profileId: profile.id, viewerId } },

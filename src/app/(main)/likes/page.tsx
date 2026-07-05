@@ -75,35 +75,24 @@ export default async function LikesPage({
           )}
           {received.map((like) => {
             const p = like.fromProfile;
-            const femaleInitiated = p.gender === "FEMALE"; // 사진 동봉
             return (
               <div key={like.id} className="mb-3 rounded-[20px] bg-white p-4 shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
                 <Link href={`/p/${p.id}`} className="flex items-center gap-3">
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#EEE9DF] to-[#DFD8C8] text-2xl">
-                    {femaleInitiated && p.photos[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.photos[0].url} alt="" className="h-full w-full object-cover" />
-                    ) : p.gender === "MALE" && p.photos[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.photos[0].url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      "👤"
-                    )}
+                  {/* 사진은 교환 수락 전까지 비공개 (§9.0 v1.5) — 카드 뒷면으로 표시 */}
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2A2925] to-[#3A362E] text-2xl">
+                    🧵
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-extrabold">
                       {p.nickname}, {new Date().getFullYear() - p.birthYear + 1}
                     </p>
-                    <p className="mt-0.5 text-[12.5px] text-sub">
-                      {p.jobTitle}
-                      {femaleInitiated && " · 📸 사진 동봉"}
-                    </p>
+                    <p className="mt-0.5 text-[12.5px] text-sub">{p.jobTitle}</p>
                   </div>
                   <span className="flex-shrink-0 rounded-full bg-blue-tint px-2.5 py-1 text-[11px] font-extrabold text-blue">
                     {dday(like.expiresAt)}
                   </span>
                 </Link>
-                <LikeActions likeId={like.id} acceptLabel="수락하기 💚" />
+                <LikeActions likeId={like.id} acceptLabel="사진 교환 수락 📸" />
               </div>
             );
           })}
@@ -121,7 +110,7 @@ export default async function LikesPage({
             const p = like.toProfile;
             const badge = {
               PENDING: ["전달됨 " + dday(like.expiresAt), "bg-yellow-tint text-[#B08900]"],
-              PHOTO_GRANTED: ["📸 사진 공개됨", "bg-grn-tint text-grn"],
+              PHOTO_GRANTED: ["📸 사진 교환됨", "bg-grn-tint text-grn"],
               ACCEPTED: ["성사 🎉", "bg-grn-tint text-grn"],
               REJECTED: [
                 "거절" + (like.rejectReason && REASON_LABEL[like.rejectReason] ? ` · ${REASON_LABEL[like.rejectReason]}` : ""),
@@ -153,7 +142,7 @@ export default async function LikesPage({
                     href={`/p/${p.id}`}
                     className="mt-3 block rounded-xl bg-blue py-3 text-center text-sm font-extrabold text-white"
                   >
-                    사진 보고 최종 결정하기 →
+                    사진 확인하고 연락처 교환 결정하기 →
                   </Link>
                 )}
               </div>

@@ -78,8 +78,8 @@ export async function POST(req: Request) {
   }
 
   const recipientUserId = toProfile.userId ?? toProfile.ownerId; // 대리 등록이면 중매인이 수신
-  const isFemaleInitiated = fromProfile.gender === "FEMALE";
 
+  // 1단계에서는 프로필 텍스트만 공유 — 사진은 2단계(상호 교환 수락)에서 (§9.0 v1.5)
   const like = await prisma.$transaction(async (tx) => {
     const created = await tx.like.create({
       data: {
@@ -89,20 +89,6 @@ export async function POST(req: Request) {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
-
-    // 여성 발신 = 사진 동봉: 상대 남성에게 즉시 열람권 발급 (PROJECT_SPEC §9.1)
-    if (isFemaleInitiated) {
-      await tx.photoAccess.upsert({
-        where: { profileId_viewerId: { profileId: fromProfile.id, viewerId: recipientUserId } },
-        create: {
-          profileId: fromProfile.id,
-          viewerId: recipientUserId,
-          source: "FEMALE_INITIATE",
-          likeId: created.id,
-        },
-        update: { revokedAt: null, source: "FEMALE_INITIATE", likeId: created.id },
-      });
-    }
 
     await tx.notification.create({
       data: {

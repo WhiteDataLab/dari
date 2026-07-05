@@ -93,7 +93,7 @@ export default async function DeckPage() {
             </div>
             <div className="p-3">
               <p className="text-base font-extrabold">
-                {c.identityPending ? `${c.viaName}님의 지인` : c.name}{" "}
+                {c.identityPending ? (c.pendingLabel ?? "이름 미입력") : c.name}{" "}
                 <span className="text-[13px] font-semibold text-sub">
                   {new Date().getFullYear() - c.birthYear + 1}
                 </span>
@@ -108,7 +108,7 @@ export default async function DeckPage() {
               )}
               {c.identityPending && (
                 <p className="mt-1 text-[11px] font-bold text-[#B08900]">
-                  ⏳ 지인({c.viaName})의 정보 입력 대기
+                  ⏳ 이름·연락처 입력 대기{c.viaName ? ` (지인 ${c.viaName})` : ""}
                 </p>
               )}
             </div>

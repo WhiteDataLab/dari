@@ -206,7 +206,8 @@ model Profile {
   // 지인의 지인 — 당사자 인적사항을 모를 때 다리 역할 지인 정보로 등록 (§7.9)
   // 입력 완료 전에는 피드/호감/공유 제외. 다리 지인이 가입하면 입력 안내를 받는다
   identityPending Boolean @default(false) // 당사자 이름·연락처 미입력
-  viaName         String? // 다리 역할 지인 이름
+  pendingLabel    String? // 미입력 동안 등록자에게 보여줄 호칭 (예: "회사 후배")
+  viaName         String? // 다리 역할 지인 이름 (선택 — 가입 시 입력 안내 매칭용)
   viaPhone        String? // 다리 역할 지인 연락처 (AES 암호화)
   viaPhoneHash    String? // 다리 역할 지인 매칭용 해시
 
@@ -312,8 +313,9 @@ model Like {
 }
 
 enum PhotoAccessSource {
-  FEMALE_GRANT // 여성이 남성의 프로필 전송을 수락
-  FEMALE_INITIATE // 여성 발신 호감 (사진 동봉)
+  FEMALE_GRANT // (구) 여성이 남성의 프로필 전송을 수락 — v1.5부터 EXCHANGE로 대체
+  FEMALE_INITIATE // (구) 여성 발신 호감 사진 동봉 — v1.5부터 미사용
+  EXCHANGE // 상호 사진 교환 (2단계 수락 시 양방향 발급, §9.0 v1.5)
   MATCH // 성사
 }
 

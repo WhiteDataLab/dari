@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, filterVisibleProfiles } from "@/lib/visibility";
+import { CardDeck } from "@/components/CardDeck";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,6 @@ export default async function HomePage() {
       ownerId: { not: userId },
       OR: [{ userId: null }, { userId: { not: userId } }],
     },
-    include: { photos: { where: { isMain: true }, take: 1 } },
     orderBy: { createdAt: "desc" },
     take: 60,
   });
@@ -65,20 +65,9 @@ export default async function HomePage() {
   const ctx = await getViewerContext(userId);
   const profiles = await filterVisibleProfiles(ctx, candidates);
 
-  // 여성 사진 gate: 열람권 일괄 조회
-  const accessSet = new Set(
-    (
-      await prisma.photoAccess.findMany({
-        where: { viewerId: userId, revokedAt: null },
-        select: { profileId: true },
-      })
-    ).map((a) => a.profileId),
-  );
-  const viewerIsFemale = viewerSelf?.gender === "FEMALE";
-
+  // 사진은 성별 무관 비공개 (§9.0 v1.5) — 피드는 카드 뒷면 + 텍스트 프로필만
   const cards = await Promise.all(
     profiles.map(async (p) => {
-      const locked = p.gender === "FEMALE" && !viewerIsFemale && !accessSet.has(p.id);
       const path = await computeRelationPath(userId, p).catch(() => null);
       return {
         id: p.id,
@@ -87,8 +76,6 @@ export default async function HomePage() {
         area: `${p.areaSido} ${p.areaGugun}`,
         job: p.jobTitle,
         comment: p.recommenderComment,
-        photoUrl: locked ? null : (p.photos[0]?.url ?? null),
-        locked,
         degree: path && !path.far ? path.degree : null,
       };
     }),
@@ -104,7 +91,7 @@ export default async function HomePage() {
       </header>
       <h1 className="text-[22px] font-extrabold tracking-tight">오늘의 인연</h1>
       <p className="mb-4 mt-0.5 text-sm text-sub">
-        모두 누군가의 지인이에요. 몇 다리인지 확인해 보세요.
+        카드를 탭해서 인연을 뽑아 보세요. 사진은 서로 교환을 수락해야 공개돼요.
       </p>
 
       {identityRequests > 0 && (
@@ -152,52 +139,7 @@ export default async function HomePage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {cards.map((c) => (
-            <Link
-              key={c.id}
-              href={`/p/${c.id}`}
-              className="overflow-hidden rounded-[20px] bg-white text-left shadow-[0_2px_12px_rgba(28,27,24,0.06)] active:scale-[0.97]"
-            >
-              <div
-                className={`relative flex aspect-[4/5] items-center justify-center ${
-                  c.locked || !c.photoUrl ? "bg-gradient-to-br from-[#EEE9DF] to-[#DFD8C8]" : ""
-                }`}
-              >
-                {c.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.photoUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-5xl opacity-45 grayscale">👤</span>
-                )}
-                {c.degree && (
-                  <span className="absolute left-2.5 top-2.5 rounded-full bg-thread-soft px-2 py-0.5 text-[11px] font-bold text-thread">
-                    🧵 {c.degree}다리
-                  </span>
-                )}
-                {c.locked && (
-                  <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-sub shadow">
-                    🔒 수락 후 공개
-                  </span>
-                )}
-              </div>
-              <div className="p-3">
-                <p className="text-base font-extrabold">
-                  {c.name}{" "}
-                  <span className="text-[13px] font-semibold text-sub">{c.age}</span>
-                </p>
-                <p className="mt-0.5 text-xs text-sub">
-                  {c.area} · {c.job}
-                </p>
-                {c.comment && (
-                  <p className="mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap rounded-lg bg-ivory px-2 py-1.5 text-xs text-[#6E6759]">
-                    &ldquo;{c.comment}&rdquo;
-                  </p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
+        <CardDeck cards={cards} />
       )}
     </main>
   );

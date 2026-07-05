@@ -73,7 +73,18 @@ export default async function AdminPage() {
       select: {
         id: true, name: true, company: true, role: true, createdAt: true, deletedAt: true,
         referredBy: { select: { name: true } },
-        _count: { select: { profiles: true, referrals: true } },
+        _count: { select: { referrals: true } },
+        // 본인 프로필 (직접 생성 or 클레임 연동)
+        selfProfile: { select: { id: true, name: true, nickname: true, status: true, claimedAt: true } },
+        // 등록한 프로필 (카드덱)
+        profiles: {
+          where: { isSelf: false },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true, name: true, nickname: true, status: true,
+            identityPending: true, pendingLabel: true, viaName: true, claimedAt: true, gender: true,
+          },
+        },
       },
     }),
   ]);
@@ -216,23 +227,67 @@ export default async function AdminPage() {
       {/* 회원 목록 */}
       <h2 className={h2}>회원 목록 (최근 50명)</h2>
       <div className={card}>
-        {users.map((u) => (
-          <div key={u.id} className="border-b border-line py-3 last:border-0">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-extrabold">
-                {u.name}
-                {u.role === "ADMIN" && <span className="ml-1.5 rounded bg-blue-tint px-1.5 py-0.5 text-[10px] font-extrabold text-blue">ADMIN</span>}
-                {u.deletedAt && <span className="ml-1.5 rounded bg-line px-1.5 py-0.5 text-[10px] font-bold text-sub">탈퇴</span>}
+        {users.map((u) => {
+          const profileBadge = (p: {
+            status: string;
+            identityPending?: boolean;
+            claimedAt?: Date | null;
+          }) =>
+            p.identityPending
+              ? " ⏳대기"
+              : p.status === "MATCHED"
+                ? " 🎓"
+                : p.status === "HIDDEN"
+                  ? " 🙈숨김"
+                  : "";
+          return (
+            <div key={u.id} className="border-b border-line py-3 last:border-0">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-extrabold">
+                  {u.name}
+                  {u.role === "ADMIN" && <span className="ml-1.5 rounded bg-blue-tint px-1.5 py-0.5 text-[10px] font-extrabold text-blue">ADMIN</span>}
+                  {u.deletedAt && <span className="ml-1.5 rounded bg-line px-1.5 py-0.5 text-[10px] font-bold text-sub">탈퇴</span>}
+                </p>
+                <span className="text-xs text-sub">{u.createdAt.toLocaleDateString("ko-KR")}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-sub">
+                {u.company || "-"}
+                {u.referredBy && ` · 초대: ${u.referredBy.name}`}
+                {` · 초대한 지인 ${u._count.referrals}`}
               </p>
-              <span className="text-xs text-sub">{u.createdAt.toLocaleDateString("ko-KR")}</span>
+              {/* 본인 프로필 + 등록한 카드덱 — 클릭 시 프로필 열람 */}
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {u.selfProfile && (
+                  <Link
+                    href={`/p/${u.selfProfile.id}`}
+                    className="rounded-full bg-blue-tint px-2.5 py-1 text-[11px] font-bold text-blue"
+                  >
+                    본인 {u.selfProfile.name || u.selfProfile.nickname}
+                    {u.selfProfile.claimedAt ? " 🔗" : ""}
+                    {profileBadge(u.selfProfile)}
+                  </Link>
+                )}
+                {u.profiles
+                  .filter((p) => p.id !== u.selfProfile?.id)
+                  .map((p) => (
+                    <Link
+                      key={p.id}
+                      href={`/p/${p.id}`}
+                      className="rounded-full bg-ivory px-2.5 py-1 text-[11px] font-bold text-[#6E6759]"
+                    >
+                      🃏 {p.identityPending ? (p.pendingLabel ?? "이름 미입력") : p.name || p.nickname}
+                      {p.gender === "FEMALE" ? " ♀" : " ♂"}
+                      {p.claimedAt ? " 🔗" : ""}
+                      {profileBadge(p)}
+                    </Link>
+                  ))}
+                {!u.selfProfile && u.profiles.length === 0 && (
+                  <span className="text-[11px] text-[#B4AB9B]">등록한 프로필 없음</span>
+                )}
+              </div>
             </div>
-            <p className="mt-0.5 text-xs text-sub">
-              {u.company || "-"}
-              {u.referredBy && ` · 초대: ${u.referredBy.name}`}
-              {` · 프로필 ${u._count.profiles} · 초대한 지인 ${u._count.referrals}`}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

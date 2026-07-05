@@ -12,10 +12,10 @@ const REASONS = [
 ] as const;
 
 export type CtaMode =
-  | "send" // 호감 보내기 (여성 대상이면 "내 프로필 보내기")
+  | "send" // 1단계: 호감 보내기 (프로필만 공유)
   | "waiting" // 내가 보냄, 상대 응답 대기
-  | "respond" // 받은 호감 수락/거절
-  | "final" // 사진 공개 후 최종 결정 (남성)
+  | "respond" // 2단계: 받은 호감 → 사진 교환 수락/거절
+  | "final" // 3단계: 사진 확인 후 연락처 교환 결정 (발신자)
   | "matched"
   | "none";
 
@@ -23,12 +23,10 @@ export function LikeCta({
   mode,
   toProfileId,
   likeId,
-  targetLocked,
 }: {
   mode: CtaMode;
   toProfileId: string;
   likeId?: string;
-  targetLocked?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -69,7 +67,7 @@ export function LikeCta({
       setMessage("매칭 성사! 성사 탭에서 번호를 확인하세요 🎉");
       setTimeout(() => router.push("/matches"), 1200);
     } else if (data.status === "PHOTO_GRANTED") {
-      setMessage("수락했어요. 사진이 공개됐어요 📸");
+      setMessage("사진을 서로 교환했어요 📸 확인해 보세요");
       router.refresh();
     } else {
       setMessage("사유와 함께 정중히 전달했어요");
@@ -93,13 +91,11 @@ export function LikeCta({
         {mode === "send" && (
           <>
             <button onClick={send} disabled={loading} className={primary}>
-              {targetLocked ? "📮 내 프로필 보내기" : "💚 호감 보내기"}
+              💚 호감 보내기
             </button>
-            {targetLocked && (
-              <p className="mt-2 text-center text-[11.5px] font-semibold text-sub">
-                상대가 수락하면 사진이 공개되고, 최종 결정은 내가 해요
-              </p>
-            )}
+            <p className="mt-2 text-center text-[11.5px] font-semibold text-sub">
+              호감 → 📸 사진 교환 → 📞 연락처 교환 순서로 서로 수락하며 진행돼요
+            </p>
           </>
         )}
         {mode === "waiting" && (
@@ -114,14 +110,14 @@ export function LikeCta({
                 거절
               </button>
               <button onClick={() => respond("accept")} disabled={loading} className={primary}>
-                {mode === "final" ? "최종 수락 💚" : "수락하기 💚"}
+                {mode === "final" ? "📞 연락처 교환 (성사)" : "📸 사진 교환 수락"}
               </button>
             </div>
-            {mode === "final" && (
-              <p className="mt-2 text-center text-[11.5px] font-semibold text-sub">
-                ⏳ 결정은 당당하게, 대신 빠르게 (48시간)
-              </p>
-            )}
+            <p className="mt-2 text-center text-[11.5px] font-semibold text-sub">
+              {mode === "final"
+                ? "⏳ 사진을 확인했다면 48시간 안에 결정해 주세요"
+                : "수락하면 서로의 사진이 동시에 공개돼요"}
+            </p>
           </>
         )}
         {mode === "matched" && (

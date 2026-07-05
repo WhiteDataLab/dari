@@ -45,10 +45,11 @@ export const profileCreateSchema = profileFieldsSchema
     relationToOwner: z.nativeEnum(RelationType),
     consentConfirmed: z.boolean().optional(),
     delegatePhotoConsent: z.boolean().optional(),
-    // 당사자 이름·연락처 — 지인의 지인(identityPending)일 땐 생략, 대신 via* 필수 (라우트에서 검증)
+    // 당사자 이름·연락처 미상 등록 (identityPending) — 호칭 필수, 다리 지인 정보는 선택 (라우트에서 검증)
     name: z.string().min(1).max(30).optional(),
     phone: z.string().regex(PHONE_RE).optional(),
     identityPending: z.boolean().optional(),
+    pendingLabel: z.string().min(1).max(20).optional(), // 호칭 (예: "회사 후배")
     viaName: z.string().min(1).max(30).optional(),
     viaPhone: z.string().regex(PHONE_RE).optional(),
   });

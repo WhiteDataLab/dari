@@ -29,22 +29,26 @@ export default async function ProfileDetailPage({
 }) {
   const session = await auth();
   const userId = session!.user.id;
+  const isAdmin = (session!.user as { role?: string }).role === "ADMIN"; // 관리자는 운영 목적 전체 열람
   const { profileId } = await params;
 
   const profile = await prisma.profile.findUnique({
     where: { id: profileId },
     include: { photos: { orderBy: [{ isMain: "desc" }, { sortOrder: "asc" }] } },
   });
-  if (!profile || profile.status === "HIDDEN") notFound();
+  if (!profile) notFound();
 
   const isMine = profile.ownerId === userId || profile.userId === userId;
   const canEdit = canEditProfile(userId, profile);
 
-  // 이름·연락처 미입력(지인의 지인) 프로필은 등록자 외 비노출 (§7.9)
-  if (profile.identityPending && !isMine) notFound();
+  // 숨김 프로필은 본인·등록자·관리자만
+  if (profile.status === "HIDDEN" && !isMine && !isAdmin) notFound();
+
+  // 이름·연락처 미입력 프로필은 등록자·관리자 외 비노출 (§7.9)
+  if (profile.identityPending && !isMine && !isAdmin) notFound();
 
   // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
-  if (!isMine) {
+  if (!isMine && !isAdmin) {
     const ctx = await getViewerContext(userId);
     if (!(await isProfileVisible(ctx, profile))) notFound();
   }
@@ -68,7 +72,10 @@ export default async function ProfileDetailPage({
     if (like) {
       likeId = like.id;
       const iAmSender = like.fromProfileId === mySelf.id;
-      if (like.status === "REJECTED") notFound(); // 거절 이력 → 404
+      if (like.status === "REJECTED") {
+        if (!isAdmin) notFound(); // 거절 이력 → 404 (관리자는 열람만)
+        mode = "none";
+      }
       else if (like.status === "ACCEPTED") mode = "matched";
       else if (like.status === "EXPIRED") mode = "none";
       else if (like.status === "PENDING") mode = iAmSender ? "waiting" : "respond";
@@ -148,9 +155,9 @@ export default async function ProfileDetailPage({
         ) : (
           <div className="flex aspect-[4/4.6] flex-col items-center justify-center gap-2.5 rounded-3xl bg-gradient-to-br from-[#EEE9DF] to-[#DFD8C8]">
             <span className="text-[70px] opacity-45 grayscale">👤</span>
-            <p className="text-[13px] font-bold text-sub">
+            <p className="px-8 text-center text-[13px] font-bold text-sub">
               {profile.photos.length > 0
-                ? "사진은 상대가 수락하면 공개돼요"
+                ? `사진 ${profile.photos.length}장 — 서로 사진 교환을 수락하면 공개돼요 🔒`
                 : "아직 사진이 없어요"}
             </p>
           </div>
@@ -172,9 +179,15 @@ export default async function ProfileDetailPage({
           </p>
         )}
         {profile.identityPending && (
-          <p className="mt-1.5 rounded-xl bg-yellow-tint px-3 py-2 text-xs font-semibold text-[#6B5B1E]">
-            ⏳ 다리 역할 지인({profile.viaName})이 이름·연락처를 입력하면 탐색에 공개돼요
-          </p>
+          <div className="mt-1.5 rounded-xl bg-yellow-tint px-3 py-2.5 text-xs font-semibold text-[#6B5B1E]">
+            ⏳ 이름·연락처를 입력하면 탐색에 공개돼요
+            {profile.viaName ? ` (다리 지인 ${profile.viaName}님도 입력 가능)` : ""}
+            {isMine && (
+              <Link href={`/p/${profile.id}/identify`} className="mt-1.5 block font-extrabold text-blue">
+                ✍️ 지금 입력하기 ›
+              </Link>
+            )}
+          </div>
         )}
         <p className="mt-0.5 text-sm text-sub">
           {profile.heightCm}cm · {profile.areaSido} {profile.areaGugun}
@@ -254,12 +267,7 @@ export default async function ProfileDetailPage({
       {!isMine && <ReportButton profileId={profile.id} />}
 
       {mode !== "none" && (
-        <LikeCta
-          mode={mode}
-          toProfileId={profile.id}
-          likeId={likeId}
-          targetLocked={!photosVisible}
-        />
+        <LikeCta mode={mode} toProfileId={profile.id} likeId={likeId} />
       )}
     </main>
   );

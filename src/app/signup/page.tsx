@@ -237,22 +237,28 @@ export default function SignupPage() {
         <>
           <h1 className="text-[22px] font-extrabold tracking-tight">기본 정보를 알려주세요</h1>
           <p className="mt-1 text-sm text-sub">연락처는 매칭 성사 전까지 아무에게도 공개되지 않아요.</p>
-          <div className="mt-8 space-y-3">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className={input} />
+          <div className="mt-8">
+            <p className="pb-1.5 text-sm font-extrabold">이름</p>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" className={input} />
+            <p className="pb-1.5 pt-4 text-sm font-extrabold">연락처</p>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="연락처 (010-0000-0000)"
+              placeholder="010-0000-0000"
               inputMode="tel"
               className={input}
             />
+            <p className="pb-1.5 pt-4 text-sm font-extrabold">
+              생년월일 <span className="font-medium text-sub">(나이 계산에만 쓰여요)</span>
+            </p>
             <input
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
               className={input}
             />
-            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="직장" className={input} />
+            <p className="pb-1.5 pt-4 text-sm font-extrabold">직장</p>
+            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="회사명" className={input} />
 
             <div className="space-y-3 pt-3">
               {(

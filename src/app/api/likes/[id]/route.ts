@@ -75,8 +75,6 @@ export async function PATCH(
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
 
-  const maleInitiated = like.fromProfile.gender === "MALE";
-
   // ── 거절 (어느 단계든 본인 차례에 가능) ──
   if (action === "reject") {
     const canReject =
@@ -111,8 +109,9 @@ export async function PATCH(
     return NextResponse.json({ error: "잘못된 요청이에요" }, { status: 400 });
   }
 
-  // ── 수락 ──
+  // ── 수락 (성별 무관 대칭 3단계, §9.0 v1.5) ──
   if (like.status === "PENDING") {
+    // 2단계: 수신자가 "사진 교환 수락" → 양방향 사진 공개, 발신자 최종 결정 대기 48시간
     if (!isRecipient) {
       return NextResponse.json({ error: "상대의 응답을 기다리는 중이에요" }, { status: 400 });
     }
@@ -120,51 +119,40 @@ export async function PATCH(
       return NextResponse.json({ error: "기한이 지난 호감이에요" }, { status: 400 });
     }
 
-    if (maleInitiated) {
-      // 2단계: 여성 수락 → 사진 공개, 남성 최종 결정 대기 48시간
-      await prisma.$transaction(async (tx) => {
-        const now = new Date();
-        await tx.like.update({
-          where: { id },
-          data: {
-            status: "PHOTO_GRANTED",
-            photoGrantedAt: now,
-            finalDeadline: new Date(now.getTime() + 48 * 60 * 60 * 1000),
-          },
-        });
-        await tx.photoAccess.upsert({
-          where: {
-            profileId_viewerId: { profileId: like.toProfileId, viewerId: fromUserId },
-          },
-          create: {
-            profileId: like.toProfileId,
-            viewerId: fromUserId,
-            source: "FEMALE_GRANT",
-            likeId: id,
-          },
-          update: { revokedAt: null, source: "FEMALE_GRANT", likeId: id },
-        });
-        await tx.notification.create({
-          data: {
-            userId: fromUserId,
-            type: "LIKE_ACCEPTED",
-            payload: { likeId: id, stage: "PHOTO_GRANTED" },
-          },
-        });
+    await prisma.$transaction(async (tx) => {
+      const now = new Date();
+      await tx.like.update({
+        where: { id },
+        data: {
+          status: "PHOTO_GRANTED",
+          photoGrantedAt: now,
+          finalDeadline: new Date(now.getTime() + 48 * 60 * 60 * 1000),
+        },
       });
-      return NextResponse.json({ ok: true, status: "PHOTO_GRANTED" });
-    }
-
-    // 여성 발신: 남성 수락 1회로 성사
-    const degree = await degreeBetween(fromUserId, like.toProfile);
-    const match = await prisma.$transaction((tx) =>
-      createMatch(tx, like, fromUserId, toUserId, degree),
-    );
-    return NextResponse.json({ ok: true, status: "ACCEPTED", matchId: match.id });
+      // 상호 사진 교환 — 양방향 열람권
+      for (const [profileId, viewerId] of [
+        [like.toProfileId, fromUserId],
+        [like.fromProfileId, toUserId],
+      ] as const) {
+        await tx.photoAccess.upsert({
+          where: { profileId_viewerId: { profileId, viewerId } },
+          create: { profileId, viewerId, source: "EXCHANGE", likeId: id },
+          update: { revokedAt: null, source: "EXCHANGE", likeId: id },
+        });
+      }
+      await tx.notification.create({
+        data: {
+          userId: fromUserId,
+          type: "LIKE_ACCEPTED",
+          payload: { likeId: id, stage: "PHOTO_GRANTED" },
+        },
+      });
+    });
+    return NextResponse.json({ ok: true, status: "PHOTO_GRANTED" });
   }
 
   if (like.status === "PHOTO_GRANTED") {
-    // 3단계: 남성 최종 수락 (48시간 기한)
+    // 3단계: 발신자가 사진 확인 후 "연락처 교환" (48시간 기한) → 성사
     if (!isSender) {
       return NextResponse.json({ error: "상대의 최종 결정을 기다리는 중이에요" }, { status: 400 });
     }
