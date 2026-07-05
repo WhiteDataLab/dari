@@ -78,9 +78,15 @@ export default async function LikesPage({
             return (
               <div key={like.id} className="mb-3 rounded-[20px] bg-white p-4 shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
                 <Link href={`/p/${p.id}`} className="flex items-center gap-3">
-                  {/* 사진은 교환 수락 전까지 비공개 (§9.0 v1.5) — 카드 뒷면으로 표시 */}
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2A2925] to-[#3A362E] text-2xl">
-                    🧵
+                  {/* 사진은 교환 수락 전까지 비공개 (§9.0 v1.5) — 성별 색상 카드 뒷면 */}
+                  <div
+                    className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl text-2xl ${
+                      p.gender === "MALE"
+                        ? "bg-gradient-to-br from-[#2C4E80] to-[#1D3557]"
+                        : "bg-gradient-to-br from-[#B85C79] to-[#8E3B58]"
+                    }`}
+                  >
+                    🃏
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-extrabold">

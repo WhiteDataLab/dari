@@ -105,15 +105,17 @@ export function PhotoUploader({
         hidden
         onChange={(e) => upload(e.target.files)}
       />
-      <p className="mt-2 text-xs text-sub">대표 1장 필수, 최대 10장 · 자동으로 리사이징돼요</p>
+      <p className="mt-2 text-xs text-sub">
+        사진은 선택이에요 (최대 10장 · 자동 리사이징) — 없으면 프로필에 &ldquo;사진 미등록&rdquo;으로
+        표시돼요
+      </p>
       {error && <p className="mt-2 text-sm font-semibold text-thread">{error}</p>}
       {onDone && (
         <button
           onClick={onDone}
-          disabled={photos.length === 0}
-          className="mt-4 w-full rounded-2xl bg-blue py-4 text-base font-extrabold text-white disabled:opacity-40"
+          className="mt-4 w-full rounded-2xl bg-blue py-4 text-base font-extrabold text-white"
         >
-          완료 🎉
+          {photos.length === 0 ? "사진 없이 완료" : "완료 🎉"}
         </button>
       )}
     </div>

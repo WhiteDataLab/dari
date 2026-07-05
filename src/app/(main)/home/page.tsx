@@ -57,6 +57,7 @@ export default async function HomePage() {
       ownerId: { not: userId },
       OR: [{ userId: null }, { userId: { not: userId } }],
     },
+    include: { _count: { select: { photos: true } } },
     orderBy: { createdAt: "desc" },
     take: 60,
   });
@@ -77,11 +78,12 @@ export default async function HomePage() {
         job: p.jobTitle,
         comment: p.recommenderComment,
         degree: path && !path.far ? path.degree : null,
+        gender: p.gender,
+        hasPhotos: p._count.photos > 0,
       };
     }),
   );
 
-  const profileIncomplete = !viewerSelf || viewerSelf._count.photos === 0;
   const hasDeck = myProfiles.length > (viewerSelf ? 1 : 0);
 
   return (
@@ -102,8 +104,8 @@ export default async function HomePage() {
           ✍️ <b>이름·연락처 입력을 기다리는 지인 프로필이 {identityRequests}건</b> 있어요 ›
         </Link>
       )}
-      {profileIncomplete &&
-        (!viewerSelf && hasDeck ? (
+      {!viewerSelf &&
+        (hasDeck ? (
           // 지인 추천만 하는 중매인 — 프로필 없이도 자유롭게 둘러볼 수 있음을 안내
           <div className="mb-2.5 rounded-xl bg-blue-tint px-3.5 py-3 text-[13px] font-semibold text-[#2B6CD4]">
             🃏 <b>중매인 모드로 둘러보는 중이에요</b> — 프로필 없이도 구경과 지인 추천은 자유예요.
@@ -116,9 +118,17 @@ export default async function HomePage() {
             href="/me/profile"
             className="mb-2.5 block rounded-xl bg-blue-tint px-3.5 py-3 text-[13px] font-semibold text-[#2B6CD4]"
           >
-            ✍️ <b>내 프로필을 완성해 주세요</b> — 사진까지 등록해야 호감을 보낼 수 있어요
+            ✍️ <b>내 프로필을 만들어 주세요</b> — 프로필이 있어야 호감을 보낼 수 있어요
           </Link>
         ))}
+      {viewerSelf && viewerSelf._count.photos === 0 && (
+        <Link
+          href="/me/profile"
+          className="mb-2.5 block rounded-xl bg-yellow-tint px-3.5 py-3 text-[13px] font-semibold text-[#6B5B1E]"
+        >
+          📷 <b>사진이 아직 없어요</b> — 등록해 두면 사진 교환 단계에서 바로 보여줄 수 있어요
+        </Link>
+      )}
       {!hasDeck && (
         <Link
           href="/deck/new"

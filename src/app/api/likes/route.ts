@@ -26,12 +26,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (fromProfile._count.photos === 0) {
-    return NextResponse.json(
-      { error: "대표 사진을 등록해야 호감을 보낼 수 있어요", needProfile: true },
-      { status: 400 },
-    );
-  }
+  // 사진은 선택 (v1.5) — 미등록이어도 호감 전송 가능, 상대에겐 "사진 미등록" 표시
   if (fromProfile.status === "MATCHED") {
     return NextResponse.json({ error: "이미 성사된 프로필이에요 🎓" }, { status: 400 });
   }

@@ -97,14 +97,22 @@ export default async function SharedProfilePage({
       </header>
 
       <div className="mx-5">
-        {/* 사진은 성별 무관 비공개 — 카드 뒷면 스타일 (§9.0 v1.5) */}
-        <div className="relative flex aspect-[4/3.2] flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border-[3px] border-[#3A362E] bg-gradient-to-br from-[#2A2925] via-[#3A362E] to-[#211F1B]">
-          <div className="absolute inset-3 rounded-2xl border-[1.5px] border-dashed border-white/15" />
-          <span className="text-[46px]">🧵</span>
-          <p className="px-8 text-center text-[13px] font-bold text-white/75">
+        {/* 사진은 성별 무관 비공개 — 성별 색상 카드 뒷면 (§9.0 v1.5) */}
+        <div
+          className={`relative flex aspect-[4/3.2] flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border-[3px] ${
+            profile.gender === "MALE"
+              ? "border-[#3B6BAD] bg-gradient-to-br from-[#2C4E80] via-[#3B6BAD] to-[#1D3557]"
+              : "border-[#D67F9D] bg-gradient-to-br from-[#B85C79] via-[#D67F9D] to-[#8E3B58]"
+          }`}
+        >
+          <div className="absolute inset-3 rounded-2xl border-[1.5px] border-dashed border-white/20" />
+          <span className="text-[46px]">
+            {profile.photos.length > 0 ? "🃏" : profile.gender === "MALE" ? "🙋‍♂️" : "🙋‍♀️"}
+          </span>
+          <p className="px-8 text-center text-[13px] font-bold text-white/80">
             {profile.photos.length > 0
               ? `사진 ${profile.photos.length}장 — 다리에서 서로 사진 교환을 수락하면 공개돼요`
-              : "아직 사진이 없어요"}
+              : "📷 사진 미등록 프로필이에요"}
           </p>
         </div>
       </div>

@@ -81,7 +81,8 @@ export default async function DeckPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={c.photos[0].url} alt="" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-5xl opacity-45 grayscale">👤</span>
+                // 사진 미등록 — 성별 아이콘 (v1.5)
+                <span className="text-5xl">{c.gender === "MALE" ? "🙋‍♂️" : "🙋‍♀️"}</span>
               )}
               {c.state === "done" && (
                 <div className="absolute inset-0 z-[1] flex items-center justify-center bg-grn/10">

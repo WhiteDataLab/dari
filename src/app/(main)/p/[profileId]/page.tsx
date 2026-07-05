@@ -154,12 +154,22 @@ export default async function ProfileDetailPage({
           </div>
         ) : (
           <div className="flex aspect-[4/4.6] flex-col items-center justify-center gap-2.5 rounded-3xl bg-gradient-to-br from-[#EEE9DF] to-[#DFD8C8]">
-            <span className="text-[70px] opacity-45 grayscale">👤</span>
-            <p className="px-8 text-center text-[13px] font-bold text-sub">
-              {profile.photos.length > 0
-                ? `사진 ${profile.photos.length}장 — 서로 사진 교환을 수락하면 공개돼요 🔒`
-                : "아직 사진이 없어요"}
-            </p>
+            {profile.photos.length > 0 ? (
+              <>
+                <span className="text-[70px] opacity-45 grayscale">👤</span>
+                <p className="px-8 text-center text-[13px] font-bold text-sub">
+                  사진 {profile.photos.length}장 — 서로 사진 교환을 수락하면 공개돼요 🔒
+                </p>
+              </>
+            ) : (
+              // 사진 미등록 — 성별 아이콘으로 표시 (v1.5)
+              <>
+                <span className="text-[70px]">{profile.gender === "MALE" ? "🙋‍♂️" : "🙋‍♀️"}</span>
+                <span className="rounded-full bg-white/80 px-3 py-1 text-[12px] font-extrabold text-sub">
+                  📷 사진 미등록 프로필이에요
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
