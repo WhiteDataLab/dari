@@ -16,6 +16,8 @@ export type DeckCardData = {
   gender: "MALE" | "FEMALE";
   hasPhotos: boolean;
   isNew: boolean; // 아직 열람하지 않은 카드
+  isMine?: boolean; // 나 or 내가 등록한 지인 카드
+  isSelf?: boolean; // 내 본인 프로필
 };
 
 // 성별 카드 뒷면 색상 — 남성 파랑 계열 / 여성 분홍 계열 (§9.0 v1.5)
@@ -42,6 +44,8 @@ function Card({ c, index }: { c: DeckCardData; index: number }) {
       return;
     }
     setIsFlipped(true);
+    // 내 카드는 열람 기록 대상 아님 (NEW는 상대 카드에만)
+    if (c.isMine) return;
     // 열람 기록 (NEW 마크 해제용) — 실패해도 UX에는 영향 없음
     fetch("/api/views", {
       method: "POST",
@@ -66,10 +70,16 @@ function Card({ c, index }: { c: DeckCardData; index: number }) {
           className={`absolute inset-0 flex flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[20px] border-[3px] ${back.border} ${back.bg} shadow-[0_4px_16px_rgba(28,27,24,0.25)] [backface-visibility:hidden]`}
         >
           <div className="absolute inset-2.5 rounded-[14px] border-[1.5px] border-dashed border-white/20" />
-          {c.isNew && (
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-thread px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-white shadow">
-              NEW
+          {c.isMine ? (
+            <span className="absolute right-2.5 top-2.5 rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-white">
+              {c.isSelf ? "나" : "내 지인"}
             </span>
+          ) : (
+            c.isNew && (
+              <span className="absolute right-2.5 top-2.5 rounded-full bg-thread px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-white shadow">
+                NEW
+              </span>
+            )
           )}
           <span
             className="text-[52px] drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]"
@@ -120,35 +130,51 @@ function Card({ c, index }: { c: DeckCardData; index: number }) {
   );
 }
 
-// 탐색 피드 카드덱 (§9.0 v1.5) — 새 카드(NEW)와 이미 뽑아본 카드를 나눠 배치
-export function CardDeck({ cards }: { cards: DeckCardData[] }) {
+// 탐색 피드 카드덱 (§9.0 v1.5)
+// 내 카드(나·내 지인) → 새 카드(NEW) → 이미 뽑아본 카드 순으로 배치
+export function CardDeck({ cards, mine = [] }: { cards: DeckCardData[]; mine?: DeckCardData[] }) {
   const newCards = cards.filter((c) => c.isNew);
   const seenCards = cards.filter((c) => !c.isNew);
-  const showSections = newCards.length > 0 && seenCards.length > 0;
+  // 상대 카드 섹션 헤더는 내 카드가 있거나, 새/뽑아본이 둘 다 있을 때만 노출
+  const showCandidateHeaders = mine.length > 0 || (newCards.length > 0 && seenCards.length > 0);
+
+  const grid = (list: DeckCardData[], offset: number) => (
+    <div className="grid grid-cols-2 gap-3">
+      {list.map((c, i) => (
+        <Card key={c.id} c={c} index={i + offset} />
+      ))}
+    </div>
+  );
 
   return (
     <div>
-      {showSections && (
-        <h2 className="mb-2 text-sm font-extrabold text-sub">
-          🆕 새로 올라온 카드 <span className="text-thread">{newCards.length}</span>
-        </h2>
+      {mine.length > 0 && (
+        <>
+          <h2 className="mb-2 text-sm font-extrabold text-sub">
+            🗂 내 카드 <span className="text-blue">{mine.length}</span>
+          </h2>
+          {grid(mine, 0)}
+        </>
       )}
+
       {newCards.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {newCards.map((c, i) => (
-            <Card key={c.id} c={c} index={i} />
-          ))}
-        </div>
+        <>
+          {showCandidateHeaders && (
+            <h2 className={`mb-2 text-sm font-extrabold text-sub ${mine.length > 0 ? "mt-6" : ""}`}>
+              🆕 새로 올라온 카드 <span className="text-thread">{newCards.length}</span>
+            </h2>
+          )}
+          {grid(newCards, mine.length)}
+        </>
       )}
-      {showSections && (
-        <h2 className="mb-2 mt-6 text-sm font-extrabold text-sub">이미 뽑아본 카드</h2>
-      )}
+
       {seenCards.length > 0 && (
-        <div className={`grid grid-cols-2 gap-3 ${!showSections ? "" : ""}`}>
-          {seenCards.map((c, i) => (
-            <Card key={c.id} c={c} index={i + newCards.length} />
-          ))}
-        </div>
+        <>
+          {showCandidateHeaders && (
+            <h2 className="mb-2 mt-6 text-sm font-extrabold text-sub">이미 뽑아본 카드</h2>
+          )}
+          {grid(seenCards, mine.length + newCards.length)}
+        </>
       )}
     </div>
   );

@@ -95,6 +95,29 @@ export default async function HomePage() {
     }),
   );
 
+  // 내 카드 (나 + 내가 등록한 지인) — 매칭 조합을 한 화면에서 보기 위해 함께 노출
+  const myActive = await prisma.profile.findMany({
+    where: { OR: [{ ownerId: userId }, { userId }], status: "ACTIVE" },
+    include: { _count: { select: { photos: true } } },
+    orderBy: [{ isSelf: "desc" }, { createdAt: "asc" }],
+  });
+  const myCards = myActive.map((p) => ({
+    id: p.id,
+    // 내 카드는 실명(있으면)으로 보여 매칭 조합을 쉽게 — 미입력이면 호칭
+    name: p.identityPending ? (p.pendingLabel ?? "이름 미입력") : p.name || p.nickname,
+    age: new Date().getFullYear() - p.birthYear + 1,
+    birthYear: p.birthYear,
+    area: `${p.areaSido} ${p.areaGugun}`,
+    job: p.jobTitle,
+    comment: p.recommenderComment,
+    degree: null,
+    gender: p.gender,
+    hasPhotos: p._count.photos > 0,
+    isNew: false,
+    isMine: true as const,
+    isSelf: p.isSelf,
+  }));
+
   const hasDeck = myProfiles.length > (viewerSelf ? 1 : 0);
 
   return (
@@ -150,7 +173,7 @@ export default async function HomePage() {
         </Link>
       )}
 
-      {cards.length === 0 ? (
+      {cards.length === 0 && myCards.length === 0 ? (
         <div className="rounded-2xl bg-white p-8 text-center shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
           <p className="text-4xl">🧵</p>
           <p className="mt-3 font-bold">아직 프로필이 없어요</p>
@@ -160,7 +183,7 @@ export default async function HomePage() {
           </Link>
         </div>
       ) : (
-        <CardDeck cards={cards} />
+        <CardDeck cards={cards} mine={myCards} />
       )}
     </main>
   );
