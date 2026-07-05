@@ -2,6 +2,17 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-05 (5차) — 지인의 지인 인적사항 미상 등록 (migration 7_via_identity, 배포 완료)
+
+### 사용자 요구 → 조치
+- "지인의 지인" 등록 시 당사자 이름·연락처를 모르면 → 관계 단계에서 "이름·연락처를 아직 몰라요" 체크 → 기본 정보 단계에서 **다리 역할 지인의 이름·연락처**를 대신 입력 (`identityPending`, `via*` 필드, 스펙 §7.9)
+- 미입력 상태: 피드/상세(등록자 외 404)/호감/공유 전부 차단, 덱에 "⏳ 지인(OO)의 정보 입력 대기" 배지, name="" phoneHash=null (클레임·차단 오매칭 없음)
+- 다리 지인이 가입하면 (이름+연락처가 via*와 일치) `PROFILE_IDENTITY_NEEDED` 알림 + 홈 배너 → `/me/identify` → `/p/[id]/identify`에서 당사자 이름·연락처 + 동의 입력 (`PATCH fillIdentity`, canEdit과 별개 권한: 등록자 or 다리 지인)
+- 입력 완료 시: 정상 공개 전환, 등록자에게 `PROFILE_IDENTITY_FILLED` 알림, 당사자가 이미 회원이면 즉시 클레임 연동
+- 참고: pending 생성 시 consentConfirmed=false (동의 체크는 "다리 지인에게 알림" 의미로 재라벨) — 당사자 동의는 fillIdentity에서 확인
+
+---
+
 ## 2026-07-05 (4차) — 지인의 지인 + 산업 분야 + 사진 편집 강화 (migration 6_industry_relation, 배포 완료)
 
 ### 사용자 요구 → 조치

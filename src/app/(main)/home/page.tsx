@@ -11,7 +11,7 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [myProfiles, viewerSelf] = await Promise.all([
+  const [myProfiles, viewerSelf, me] = await Promise.all([
     // 내가 등록한 프로필 + 클레임 연동된 내 프로필 (거절 이력 제외 계산용)
     prisma.profile.findMany({
       where: { OR: [{ ownerId: userId }, { userId }] },
@@ -21,7 +21,15 @@ export default async function HomePage() {
       where: { userId },
       include: { _count: { select: { photos: true } } },
     }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, phoneHash: true } }),
   ]);
+
+  // 내가 다리 역할인 "지인의 지인" 프로필 — 이름·연락처 입력 대기 건수
+  const identityRequests = me?.phoneHash
+    ? await prisma.profile.count({
+        where: { identityPending: true, viaPhoneHash: me.phoneHash, viaName: me.name },
+      })
+    : 0;
   const myIds = myProfiles.map((p) => p.id);
 
   // 거절 이력 상대 제외 (양방향)
@@ -43,6 +51,7 @@ export default async function HomePage() {
   const candidates = await prisma.profile.findMany({
     where: {
       status: "ACTIVE",
+      identityPending: false, // 이름·연락처 미입력(지인의 지인) 프로필 제외
       id: { notIn: [...excludeIds] },
       ownerId: { not: userId },
       OR: [{ userId: null }, { userId: { not: userId } }],
@@ -98,6 +107,14 @@ export default async function HomePage() {
         모두 누군가의 지인이에요. 몇 다리인지 확인해 보세요.
       </p>
 
+      {identityRequests > 0 && (
+        <Link
+          href="/me/identify"
+          className="mb-2.5 block rounded-xl bg-yellow-tint px-3.5 py-3 text-[13px] font-semibold text-[#6B5B1E]"
+        >
+          ✍️ <b>이름·연락처 입력을 기다리는 지인 프로필이 {identityRequests}건</b> 있어요 ›
+        </Link>
+      )}
       {profileIncomplete &&
         (!viewerSelf && hasDeck ? (
           // 지인 추천만 하는 중매인 — 프로필 없이도 자유롭게 둘러볼 수 있음을 안내

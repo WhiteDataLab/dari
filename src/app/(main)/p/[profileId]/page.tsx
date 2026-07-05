@@ -39,6 +39,9 @@ export default async function ProfileDetailPage({
   const isMine = profile.ownerId === userId || profile.userId === userId;
   const canEdit = canEditProfile(userId, profile);
 
+  // 이름·연락처 미입력(지인의 지인) 프로필은 등록자 외 비노출 (§7.9)
+  if (profile.identityPending && !isMine) notFound();
+
   // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
   if (!isMine) {
     const ctx = await getViewerContext(userId);
@@ -108,7 +111,7 @@ export default async function ProfileDetailPage({
         </Link>
         {canEdit && (
           <span className="flex items-center gap-2">
-            {profile.status === "ACTIVE" && (
+            {profile.status === "ACTIVE" && !profile.identityPending && (
               <ShareProfileButton profileId={profile.id} nickname={profile.nickname} />
             )}
             <Link
@@ -162,9 +165,14 @@ export default async function ProfileDetailPage({
             🔒 실명과 연락처는 매칭이 성사되면 공개돼요
           </p>
         )}
-        {isMine && (
+        {isMine && !profile.identityPending && (
           <p className="mt-0.5 text-xs font-semibold text-sub">
             🎭 다른 회원에게는 <b className="text-ink">{profile.nickname}</b>(으)로 보여요
+          </p>
+        )}
+        {profile.identityPending && (
+          <p className="mt-1.5 rounded-xl bg-yellow-tint px-3 py-2 text-xs font-semibold text-[#6B5B1E]">
+            ⏳ 다리 역할 지인({profile.viaName})이 이름·연락처를 입력하면 탐색에 공개돼요
           </p>
         )}
         <p className="mt-0.5 text-sm text-sub">

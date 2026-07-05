@@ -106,6 +106,16 @@ export async function POST(req: Request) {
         name: proxy.name,
       });
     }
+
+    // 내가 다리 역할인 "지인의 지인" 프로필 — 이름·연락처 입력 안내 (§7.9)
+    const pendingVia = await tx.profile.findMany({
+      where: { identityPending: true, viaPhoneHash: phoneHash, viaName: name },
+      select: { id: true },
+    });
+    for (const pv of pendingVia) {
+      await notifyTx(tx, user.id, "PROFILE_IDENTITY_NEEDED", { profileId: pv.id });
+    }
+
     return { user, claimedProfileId: proxy?.id ?? null };
   });
 

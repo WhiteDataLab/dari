@@ -14,6 +14,8 @@ const TYPE_LABEL: Record<string, string> = {
   PROFILE_REGISTERED_CONSENT: "📋 내 프로필이 등록됐어요",
   PROFILE_CLAIMED: "🔗 등록한 지인이 직접 가입해서 프로필이 연결됐어요",
   EDIT_SHARE_DECIDED: "✍️ 지인이 프로필 편집 권한을 결정했어요",
+  PROFILE_IDENTITY_NEEDED: "✍️ 이름·연락처 입력이 필요한 지인 프로필이 있어요 — 홈 배너에서 입력해 주세요",
+  PROFILE_IDENTITY_FILLED: "✅ 다리 역할 지인이 프로필의 이름·연락처를 입력했어요",
 };
 
 export default async function NotificationsPage() {

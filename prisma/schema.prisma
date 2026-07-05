@@ -188,6 +188,13 @@ model Profile {
   consentNotifiedAt    DateTime?
   delegatePhotoConsent Boolean   @default(false) // 사진 열람 수락 권한을 중매인에게 위임
 
+  // 지인의 지인 — 당사자 인적사항을 모를 때 다리 역할 지인 정보로 등록 (§7.9)
+  // 입력 완료 전에는 피드/호감/공유 제외. 다리 지인이 가입하면 입력 안내를 받는다
+  identityPending Boolean @default(false) // 당사자 이름·연락처 미입력
+  viaName         String? // 다리 역할 지인 이름
+  viaPhone        String? // 다리 역할 지인 연락처 (AES 암호화)
+  viaPhoneHash    String? // 다리 역할 지인 매칭용 해시
+
   name               String // 실명 — 성사 전에는 본인·등록자 외 비공개, 등록 후 수정 불가 (도용 방지)
   nickname           String // 랜덤 닉네임 — 성사 전 다른 회원에게 표시 (예: "포근한 수달")
   gender             Gender
@@ -235,6 +242,7 @@ model Profile {
   @@index([ownerId])
   @@index([status, gender])
   @@index([phoneHash])
+  @@index([viaPhoneHash])
 }
 
 model ProfilePhoto {
@@ -364,6 +372,8 @@ enum NotificationType {
   PROFILE_REGISTERED_CONSENT // 대리 등록 당사자 통지
   PROFILE_CLAIMED // 대리 등록 당사자가 직접 가입 → 프로필 연동 (추천인에게)
   EDIT_SHARE_DECIDED // 당사자가 추천인 편집 권한 공유 여부를 결정 (추천인에게)
+  PROFILE_IDENTITY_NEEDED // 다리 역할 지인에게: 이름·연락처 입력이 필요한 프로필이 있음
+  PROFILE_IDENTITY_FILLED // 등록자에게: 다리 지인이 당사자 정보를 입력함
 }
 
 model Notification {

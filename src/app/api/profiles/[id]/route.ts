@@ -5,9 +5,9 @@ import { requireUserId } from "@/lib/session";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
-import { decryptPhone } from "@/lib/crypto";
+import { decryptPhone, encryptPhone, hashPhone } from "@/lib/crypto";
 import { canEditProfile } from "@/lib/profileAccess";
-import { profileUpdateSchema, checkProfileFreeText } from "@/lib/profileInput";
+import { profileUpdateSchema, checkProfileFreeText, PHONE_RE } from "@/lib/profileInput";
 import { notify } from "@/lib/notify";
 
 // GET /api/profiles/[id] — 상세 + 관계 경로 (phone 제외, 사진 gate 적용)
@@ -34,6 +34,11 @@ export async function GET(
   });
   const myProfileIds = myProfiles.map((p) => p.id);
   const isMine = profile.ownerId === userId || profile.userId === userId;
+
+  // 이름·연락처 미입력(지인의 지인) 프로필은 등록자 외 비노출
+  if (profile.identityPending && !isMine) {
+    return NextResponse.json({ error: "프로필을 찾을 수 없어요" }, { status: 404 });
+  }
 
   // 노출 회피 (같은 회사 / 아는 사람) — 회피 대상이면 404
   if (!isMine) {
@@ -111,11 +116,76 @@ export async function PATCH(
 
   const { id } = await params;
   const profile = await prisma.profile.findUnique({ where: { id } });
-  if (!profile || !canEditProfile(userId, profile)) {
+  if (!profile) {
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));
+
+  // 지인의 지인 — 당사자 이름·연락처 최초 입력 (§7.9)
+  // 권한: 등록자 or 다리 역할 지인(이름+연락처 해시 일치 회원). canEdit과 별개 경로
+  if (body.action === "fillIdentity") {
+    if (!profile.identityPending) {
+      return NextResponse.json({ error: "이미 정보가 입력된 프로필이에요" }, { status: 400 });
+    }
+    let allowed = profile.ownerId === userId;
+    if (!allowed) {
+      const me = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, phoneHash: true },
+      });
+      allowed =
+        !!me?.phoneHash && me.phoneHash === profile.viaPhoneHash && me.name === profile.viaName;
+    }
+    if (!allowed) return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
+
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const phone = typeof body.phone === "string" ? body.phone : "";
+    if (!name || name.length > 30 || !PHONE_RE.test(phone)) {
+      return NextResponse.json({ error: "이름과 연락처를 확인해 주세요" }, { status: 400 });
+    }
+    if (!body.consentConfirmed) {
+      return NextResponse.json({ error: "당사자 등록 동의 확인이 필요해요" }, { status: 400 });
+    }
+
+    const phoneHash = hashPhone(phone);
+    await prisma.profile.update({
+      where: { id },
+      data: {
+        name,
+        phone: encryptPhone(phone.replace(/-/g, "")),
+        phoneHash,
+        identityPending: false,
+        consentConfirmed: true,
+        consentNotifiedAt: new Date(),
+      },
+    });
+
+    // 당사자가 이미 회원이면 즉시 클레임 연동
+    const existingUser = await prisma.user.findFirst({ where: { phoneHash, name } });
+    if (existingUser) {
+      const alreadyLinked = await prisma.profile.findFirst({
+        where: { userId: existingUser.id },
+        select: { id: true },
+      });
+      if (!alreadyLinked) {
+        await prisma.profile.update({
+          where: { id },
+          data: { userId: existingUser.id, claimedAt: new Date() },
+        });
+        await notify(existingUser.id, "PROFILE_REGISTERED_CONSENT", { profileId: id });
+      }
+    }
+
+    if (profile.ownerId !== userId) {
+      await notify(profile.ownerId, "PROFILE_IDENTITY_FILLED", { profileId: id, name });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!canEditProfile(userId, profile)) {
+    return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
+  }
 
   // 클레임된 프로필의 당사자만: 추천인(등록자) 편집 권한 공유 여부 결정
   if (body.action === "shareEdit") {
@@ -180,8 +250,8 @@ export async function PATCH(
 
   // 비가입자 공유 링크 발급 (/s/[token]) — 편집 가능자만, 노출 중 프로필만
   if (body.action === "share") {
-    if (profile.status !== "ACTIVE") {
-      return NextResponse.json({ error: "노출 중인 프로필만 공유할 수 있어요" }, { status: 400 });
+    if (profile.status !== "ACTIVE" || profile.identityPending) {
+      return NextResponse.json({ error: "정보 입력이 완료된, 노출 중인 프로필만 공유할 수 있어요" }, { status: 400 });
     }
     let token = profile.shareToken;
     if (!token) {

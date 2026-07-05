@@ -23,6 +23,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: violation }, { status: 400 });
   }
 
+  // 지인의 지인 + 당사자 인적사항 미상 → 다리 역할 지인 정보로 등록 (§7.9)
+  const pending = !d.isSelf && d.relationToOwner === "FRIEND_OF_FRIEND" && !!d.identityPending;
+
   if (d.isSelf) {
     // 본인 프로필 or 클레임(대리 등록 연동)된 프로필이 이미 있으면 중복 생성 금지
     const existing = await prisma.profile.findFirst({ where: { userId } });
@@ -41,23 +44,36 @@ export async function POST(req: Request) {
     }
   }
 
+  if (pending) {
+    if (!d.viaName?.trim() || !d.viaPhone) {
+      return NextResponse.json({ error: "다리 역할 지인의 이름과 연락처를 적어 주세요" }, { status: 400 });
+    }
+  } else if (!d.name?.trim() || !d.phone) {
+    return NextResponse.json({ error: "입력값을 확인해 주세요" }, { status: 400 });
+  }
+
   const profile = await prisma.profile.create({
     data: {
       ownerId: userId,
       isSelf: d.isSelf,
       userId: d.isSelf ? userId : null,
       relationToOwner: d.isSelf ? "SELF" : d.relationToOwner,
-      consentConfirmed: d.isSelf ? true : !!d.consentConfirmed,
-      consentNotifiedAt: d.isSelf ? null : new Date(), // TODO(phase-2): 당사자 SMS 통지
+      // pending은 당사자 동의를 아직 못 받은 상태 — 다리 지인이 정보 입력 시 확인
+      consentConfirmed: d.isSelf ? true : pending ? false : !!d.consentConfirmed,
+      consentNotifiedAt: d.isSelf || pending ? null : new Date(), // TODO(phase-2): 당사자 SMS 통지
       delegatePhotoConsent: !!d.delegatePhotoConsent,
-      name: d.name.trim(),
+      name: pending ? "" : d.name!.trim(),
       nickname: generateNickname(),
       gender: d.gender,
       birthYear: d.birthYear,
       heightCm: d.heightCm,
       bodyType: d.bodyType,
-      phone: encryptPhone(d.phone.replace(/-/g, "")),
-      phoneHash: hashPhone(d.phone),
+      phone: pending ? encryptPhone("") : encryptPhone(d.phone!.replace(/-/g, "")),
+      phoneHash: pending ? null : hashPhone(d.phone!),
+      identityPending: pending,
+      viaName: pending ? d.viaName!.trim() : null,
+      viaPhone: pending ? encryptPhone(d.viaPhone!.replace(/-/g, "")) : null,
+      viaPhoneHash: pending ? hashPhone(d.viaPhone!) : null,
       avoidSameCompany: d.avoidSameCompany ?? true,
       areaSido: d.areaSido,
       areaGugun: d.areaGugun,

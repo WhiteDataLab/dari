@@ -9,6 +9,8 @@ import {
   SmokingHabit,
 } from "@prisma/client";
 
+export const PHONE_RE = /^01[016789]-?\d{3,4}-?\d{4}$/;
+
 // 프로필 공통 입력 필드 — 생성(POST /api/profiles)과 수정(PATCH update)이 공유
 export const profileFieldsSchema = z.object({
   name: z.string().min(1).max(30),
@@ -16,7 +18,7 @@ export const profileFieldsSchema = z.object({
   birthYear: z.number().int().min(1960).max(2010),
   heightCm: z.number().int().min(120).max(230),
   bodyType: z.nativeEnum(BodyType),
-  phone: z.string().regex(/^01[016789]-?\d{3,4}-?\d{4}$/),
+  phone: z.string().regex(PHONE_RE),
   areaSido: z.string().min(1).max(20),
   areaGugun: z.string().min(1).max(20),
   company: z.string().min(1).max(50),
@@ -36,12 +38,20 @@ export const profileFieldsSchema = z.object({
   avoidSameCompany: z.boolean().optional(),
 });
 
-export const profileCreateSchema = profileFieldsSchema.extend({
-  isSelf: z.boolean(),
-  relationToOwner: z.nativeEnum(RelationType),
-  consentConfirmed: z.boolean().optional(),
-  delegatePhotoConsent: z.boolean().optional(),
-});
+export const profileCreateSchema = profileFieldsSchema
+  .omit({ name: true, phone: true })
+  .extend({
+    isSelf: z.boolean(),
+    relationToOwner: z.nativeEnum(RelationType),
+    consentConfirmed: z.boolean().optional(),
+    delegatePhotoConsent: z.boolean().optional(),
+    // 당사자 이름·연락처 — 지인의 지인(identityPending)일 땐 생략, 대신 via* 필수 (라우트에서 검증)
+    name: z.string().min(1).max(30).optional(),
+    phone: z.string().regex(PHONE_RE).optional(),
+    identityPending: z.boolean().optional(),
+    viaName: z.string().min(1).max(30).optional(),
+    viaPhone: z.string().regex(PHONE_RE).optional(),
+  });
 
 // 수정용 — 이름·연락처는 최초 등록 후 변경 불가 (도용 방지, PROJECT_SPEC §7.5)
 export const profileUpdateSchema = profileFieldsSchema.omit({ name: true, phone: true });

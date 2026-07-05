@@ -110,6 +110,11 @@ export function ProfileForm({
   const [consent, setConsent] = useState(false);
   const [delegateConsent, setDelegateConsent] = useState(false);
 
+  // 지인의 지인 — 당사자 이름·연락처를 모르는 경우 다리 역할 지인 정보로 등록 (§7.9)
+  const [identityUnknown, setIdentityUnknown] = useState(false);
+  const [viaName, setViaName] = useState("");
+  const [viaPhone, setViaPhone] = useState("");
+
   // 기본 정보
   const [name, setName] = useState(initial?.name ?? "");
   const [gender, setGender] = useState<"MALE" | "FEMALE" | null>(initial?.gender ?? null);
@@ -152,6 +157,7 @@ export function ProfileForm({
   }
 
   const stepKey = steps[step];
+  const pendingMode = !isSelf && !isEdit && relation === "FRIEND_OF_FRIEND" && identityUnknown;
 
   function validate(): string | null {
     if (stepKey === "관계 & 동의") {
@@ -163,8 +169,14 @@ export function ProfileForm({
         return "모든 항목을 채워 주세요";
       if (!isEdit) {
         // 이름·연락처는 최초 등록 시에만 입력 (수정 모드에선 잠금)
-        if (!name || !phone) return "모든 항목을 채워 주세요";
-        if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
+        // pendingMode에선 당사자 대신 다리 역할 지인의 이름·연락처
+        if (pendingMode) {
+          if (!viaName || !viaPhone) return "다리 역할 지인의 이름과 연락처를 채워 주세요";
+          if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(viaPhone)) return "연락처 형식을 확인해 주세요";
+        } else {
+          if (!name || !phone) return "모든 항목을 채워 주세요";
+          if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
+        }
       }
     }
     if (stepKey === "라이프스타일") {
@@ -187,7 +199,8 @@ export function ProfileForm({
       setLoading(true);
       const fields = {
         // 이름·연락처는 최초 등록 후 변경 불가 — 수정 모드에선 보내지 않음 (서버도 거부)
-        ...(isEdit ? {} : { name, phone }),
+        // pendingMode: 당사자 정보 대신 다리 역할 지인 정보 전송
+        ...(isEdit ? {} : pendingMode ? { identityPending: true, viaName, viaPhone } : { name, phone }),
         gender,
         birthYear: Number(birthYear),
         heightCm: Number(heightCm),
@@ -252,11 +265,25 @@ export function ProfileForm({
               <Chip key={v} selected={relation === v} onClick={() => setRelation(v)}>{l}</Chip>
             ))}
           </div>
+          {relation === "FRIEND_OF_FRIEND" && (
+            <label className="mt-4 flex items-start gap-3 rounded-2xl bg-blue-tint p-4 text-sm font-semibold text-[#2B6CD4]">
+              <input
+                type="checkbox"
+                checked={identityUnknown}
+                onChange={(e) => setIdentityUnknown(e.target.checked)}
+                className="mt-0.5 h-5 w-5 accent-[#3182F6]"
+              />
+              이 분의 이름·연락처를 아직 몰라요 — 다리 역할 지인의 정보로 등록하고, 그 지인이
+              가입하면 직접 입력해요
+            </label>
+          )}
           <div className="mt-6 space-y-3 rounded-2xl bg-yellow-tint p-4">
             <label className="flex items-start gap-3 text-sm font-semibold text-[#6B5B1E]">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}
                 className="mt-0.5 h-5 w-5 accent-[#3182F6]" />
-              ⚠️ 당사자에게 등록 동의를 받았습니다 (필수)
+              {pendingMode
+                ? "⚠️ 다리 역할 지인에게 등록 사실을 알리고 동의를 받았습니다 (필수) — 당사자 동의는 지인이 정보 입력 시 확인해요"
+                : "⚠️ 당사자에게 등록 동의를 받았습니다 (필수)"}
             </label>
             <label className="flex items-start gap-3 text-sm font-medium text-[#6B5B1E]">
               <input type="checkbox" checked={delegateConsent} onChange={(e) => setDelegateConsent(e.target.checked)}
@@ -269,10 +296,16 @@ export function ProfileForm({
 
       {stepKey === "기본 정보" && (
         <div>
-          <p className={label}>이름</p>
+          {pendingMode && (
+            <div className="mt-4 rounded-xl bg-yellow-tint px-3.5 py-3 text-[13px] font-semibold text-[#6B5B1E]">
+              🧵 당사자 대신 <b>다리 역할 지인</b>의 이름·연락처를 적어 주세요. 그 지인이 가입하면
+              당사자 정보를 입력하라는 안내를 받아요.
+            </div>
+          )}
+          <p className={label}>{pendingMode ? "지인(다리 역할) 이름" : "이름"}</p>
           <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={pendingMode ? viaName : name}
+            onChange={(e) => (pendingMode ? setViaName(e.target.value) : setName(e.target.value))}
             disabled={isEdit}
             className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}
           />
@@ -299,11 +332,14 @@ export function ProfileForm({
               <Chip key={v} selected={bodyType === v} onClick={() => setBodyType(v)}>{l}</Chip>
             ))}
           </div>
-          <p className={label}>연락처 <span className="font-medium text-sub">(성사 전까지 비공개)</span></p>
+          <p className={label}>
+            {pendingMode ? "지인(다리 역할) 연락처" : "연락처"}{" "}
+            <span className="font-medium text-sub">(성사 전까지 비공개)</span>
+          </p>
           <input
             inputMode="tel"
-            value={isEdit ? phone || "등록된 번호 (변경 불가)" : phone}
-            onChange={(e) => setPhone(e.target.value)}
+            value={isEdit ? phone || "미입력 (변경 불가)" : pendingMode ? viaPhone : phone}
+            onChange={(e) => (pendingMode ? setViaPhone(e.target.value) : setPhone(e.target.value))}
             disabled={isEdit}
             placeholder="010-0000-0000"
             className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}

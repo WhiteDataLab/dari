@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   const toProfile = await prisma.profile.findUnique({ where: { id: toProfileId } });
-  if (!toProfile || toProfile.status !== "ACTIVE") {
+  if (!toProfile || toProfile.status !== "ACTIVE" || toProfile.identityPending) {
     return NextResponse.json({ error: "프로필을 찾을 수 없어요" }, { status: 404 });
   }
   if (toProfile.ownerId === userId || toProfile.userId === userId) {
