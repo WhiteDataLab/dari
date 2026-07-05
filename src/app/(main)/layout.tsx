@@ -8,10 +8,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const [deckCount, unread] = await Promise.all([
+  const [deckCount, unread, user] = await Promise.all([
     prisma.profile.count({ where: { ownerId: userId, isSelf: false } }),
     prisma.notification.count({ where: { userId, readAt: null } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { deletedAt: true } }),
   ]);
+  if (!user || user.deletedAt) redirect("/"); // 탈퇴 회원의 잔여 세션 차단
 
   return (
     <div className="pb-[96px]">

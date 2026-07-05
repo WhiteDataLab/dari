@@ -73,9 +73,11 @@ model User {
   blocksReceived Block[]         @relation("Blocked")
   reportsMade    Report[]
   contactBlocks  ContactBlock[]
+  companyBlocks  CompanyBlock[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // 탈퇴 시각 — 개인정보는 익명화, 행은 추천 그래프 보존용으로 유지
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([referredById])
   @@index([phoneHash])
@@ -92,6 +94,19 @@ model ContactBlock {
 
   @@unique([userId, phoneHash])
   @@index([phoneHash])
+}
+
+// 특정 회사 피하기 — 등록한 회사(정규화명)와 일치하는 프로필/회원과 상호 비노출
+model CompanyBlock {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  companyNorm String // normalizeCompany() 결과 — 비교용
+  label       String // 입력 원문 표시용
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, companyNorm])
+  @@index([companyNorm])
 }
 
 model EmailVerification {

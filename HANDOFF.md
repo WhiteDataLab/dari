@@ -2,6 +2,18 @@
 
 > 최신 내용이 위로 오도록 기록한다.
 
+## 2026-07-05 (6차) — 특정 회사 피하기 + 회원 탈퇴 (migration 8_company_block_withdraw, 배포 완료)
+
+### 사용자 요구 → 조치
+1. **같은 회사 피하기**: 이미 구현되어 있었음 (§7.3, 기본 ON). 본인 프로필이 없으면 토글이 안 보여 없는 기능처럼 보였던 것 → /me/avoid에 "기본으로 켜져 있어요" 안내 추가
+2. **특정 회사 피하기**: `CompanyBlock` 모델 (정규화 회사명, 최대 50개) + `/api/company-blocks` + /me/avoid에 관리 UI. 상호 비노출: 내가 등록한 회사의 프로필 숨김 + 내 회사(User.company)를 등록한 회원에게 나를 숨김 (`visibility.ts` 정방향/역방향 반영 — 피드·상세·호감 모두 적용)
+3. **회원 탈퇴**: MY 하단 "회원 탈퇴" → /me/delete (안내 + "탈퇴합니다" 입력 확인) → `DELETE /api/me`
+   - **익명화 방식**: Like/Match/추천그래프 FK 때문에 행 삭제 대신 개인정보 제거. User(email 무효화·이름 "탈퇴 회원"·전화/회사 삭제·deletedAt), 프로필(사진 Storage까지 삭제, 이름·연락처·소개글 제거, 영구 HIDDEN, 공유토큰 무효화), 진행 중 호감 EXPIRED, PhotoAccess 전부 revoke, 차단목록·알림·인증코드 삭제
+   - 타 회원에게 클레임된 프로필은 당사자 소유라 유지
+   - 잔여 JWT: `requireUserId`가 deletedAt 확인 (전 API, 회원 규모 작아 PK 조회 1회 추가 허용) + (main) 레이아웃에서 redirect
+
+---
+
 ## 2026-07-05 (5차) — 지인의 지인 인적사항 미상 등록 (migration 7_via_identity, 배포 완료)
 
 ### 사용자 요구 → 조치

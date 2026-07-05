@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function requireUserId(): Promise<string | null> {
   const session = await auth();
-  return session?.user?.id ?? null;
+  const id = session?.user?.id ?? null;
+  if (!id) return null;
+  // 탈퇴 회원의 잔여 JWT 차단 (세션은 무상태라 DB에서 확인)
+  const user = await prisma.user.findUnique({ where: { id }, select: { deletedAt: true } });
+  return user && !user.deletedAt ? id : null;
 }
 
 // 열람자 성별 — 사진 비대칭 gate 판정용 (본인 프로필의 gender에서 파생)

@@ -17,10 +17,11 @@ export type ViewerContext = {
   phoneHash: string | null;
   avoidSameCompany: boolean; // 내 본인 프로필 설정 (없으면 true)
   blockSet: Set<string>; // 내가 등록한 연락처 해시
+  companyBlockSet: Set<string>; // 내가 피하기로 등록한 회사 (정규화명)
 };
 
 export async function getViewerContext(userId: string): Promise<ViewerContext> {
-  const [user, self, blocks] = await Promise.all([
+  const [user, self, blocks, companyBlocks] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { company: true, phoneHash: true },
@@ -30,6 +31,7 @@ export async function getViewerContext(userId: string): Promise<ViewerContext> {
       select: { avoidSameCompany: true },
     }),
     prisma.contactBlock.findMany({ where: { userId }, select: { phoneHash: true } }),
+    prisma.companyBlock.findMany({ where: { userId }, select: { companyNorm: true } }),
   ]);
   return {
     userId,
@@ -37,6 +39,7 @@ export async function getViewerContext(userId: string): Promise<ViewerContext> {
     phoneHash: user?.phoneHash ?? null,
     avoidSameCompany: self?.avoidSameCompany ?? true,
     blockSet: new Set(blocks.map((b) => b.phoneHash)),
+    companyBlockSet: new Set(companyBlocks.map((b) => b.companyNorm)),
   };
 }
 
@@ -53,16 +56,24 @@ export async function filterVisibleProfiles<T extends VisibilityFields>(
   ctx: ViewerContext,
   profiles: T[],
 ): Promise<T[]> {
-  // 상대(회원인 경우)가 내 번호를 차단 목록에 등록했는지 일괄 조회
+  // 상대(회원인 경우)가 내 번호/내 회사를 차단 목록에 등록했는지 일괄 조회
   const subjectIds = profiles.map((p) => p.userId).filter((v): v is string => !!v);
-  const blockedMe =
+  const [blockedMe, companyBlockedMe] = await Promise.all([
     ctx.phoneHash && subjectIds.length
-      ? await prisma.contactBlock.findMany({
+      ? prisma.contactBlock.findMany({
           where: { phoneHash: ctx.phoneHash, userId: { in: subjectIds } },
           select: { userId: true },
         })
-      : [];
+      : [],
+    ctx.companyNorm && subjectIds.length
+      ? prisma.companyBlock.findMany({
+          where: { companyNorm: ctx.companyNorm, userId: { in: subjectIds } },
+          select: { userId: true },
+        })
+      : [],
+  ]);
   const blockedMeSet = new Set(blockedMe.map((b) => b.userId));
+  const companyBlockedMeSet = new Set(companyBlockedMe.map((b) => b.userId));
 
   return profiles.filter((p) => {
     // 내가 등록/소유한 프로필은 항상 보임
@@ -74,6 +85,9 @@ export async function filterVisibleProfiles<T extends VisibilityFields>(
     ) {
       return false;
     }
+    // 특정 회사 피하기 — 내가 등록한 회사의 프로필 숨김 + 내 회사를 등록한 회원에게 나를 숨김
+    if (ctx.companyBlockSet.has(normalizeCompany(p.company))) return false;
+    if (p.userId && companyBlockedMeSet.has(p.userId)) return false;
     if (p.phoneHash && ctx.blockSet.has(p.phoneHash)) return false;
     if (p.userId && blockedMeSet.has(p.userId)) return false;
     // TODO(phase-2): 대리 등록 프로필 당사자의 차단 목록 반영 (비회원이라 현재는 불가)

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { InviteCard, NamePathToggle, MenuLinks, LogoutButton } from "@/components/MyMenu";
@@ -27,7 +28,13 @@ export default async function MyPage() {
         <NamePathToggle initial={user.allowNameInPath} />
         <LogoutButton />
       </div>
-      {/* TODO(phase-2): 차단 목록 / 탈퇴 */}
+
+      <Link
+        href="/me/delete"
+        className="mt-4 block py-2 text-center text-[13px] font-medium text-[#B4AB9B]"
+      >
+        회원 탈퇴
+      </Link>
     </main>
   );
 }
