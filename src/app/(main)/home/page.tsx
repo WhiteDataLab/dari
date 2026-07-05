@@ -73,7 +73,7 @@ export default async function HomePage() {
       const path = await computeRelationPath(userId, p).catch(() => null);
       return {
         id: p.id,
-        name: p.name,
+        name: p.nickname, // 성사 전 실명 비공개 (PROJECT_SPEC §7.6)
         age: new Date().getFullYear() - p.birthYear + 1,
         area: `${p.areaSido} ${p.areaGugun}`,
         job: p.jobTitle,

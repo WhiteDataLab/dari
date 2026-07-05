@@ -4,9 +4,9 @@ import { requireUserId } from "@/lib/session";
 import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
-import { decryptPhone, encryptPhone, hashPhone } from "@/lib/crypto";
+import { decryptPhone } from "@/lib/crypto";
 import { canEditProfile } from "@/lib/profileAccess";
-import { profileFieldsSchema, checkProfileFreeText } from "@/lib/profileInput";
+import { profileUpdateSchema, checkProfileFreeText } from "@/lib/profileInput";
 import { notify } from "@/lib/notify";
 
 // GET /api/profiles/[id] — 상세 + 관계 경로 (phone 제외, 사진 gate 적용)
@@ -60,31 +60,33 @@ export async function GET(
   const photosVisible = await canViewPhotos(userId, profile);
   const path = await computeRelationPath(userId, profile);
 
-  // 성사된 사이면 전화번호 포함 (유일한 복호화 경로 ②)
+  // 성사 여부 — 이름·전화번호 공개의 유일한 조건 (내 프로필 제외)
+  let matched = false;
+  if (!isMine && myProfileIds.length > 0) {
+    const match = await prisma.match.findFirst({
+      where: {
+        OR: [
+          { profileAId: { in: myProfileIds }, profileBId: id },
+          { profileAId: id, profileBId: { in: myProfileIds } },
+        ],
+      },
+    });
+    matched = !!match;
+  }
+
   let phone: string | null = null;
   try {
-    if (isMine) {
-      phone = decryptPhone(profile.phone);
-    } else if (myProfileIds.length > 0) {
-      const match = await prisma.match.findFirst({
-        where: {
-          OR: [
-            { profileAId: { in: myProfileIds }, profileBId: id },
-            { profileAId: id, profileBId: { in: myProfileIds } },
-          ],
-        },
-      });
-      if (match) phone = decryptPhone(profile.phone);
-    }
+    if (isMine || matched) phone = decryptPhone(profile.phone);
   } catch {
     phone = null; // 키 불일치 등 복호화 실패 시 미공개로 처리
   }
 
-  // 민감 필드는 응답에서 제외 (phone 암호문, phoneHash)
-  const { phone: _encrypted, phoneHash: _hash, ...rest } = profile;
+  // 민감 필드는 응답에서 제외 (phone 암호문, phoneHash), 실명은 성사 전 닉네임으로 대체
+  const { phone: _encrypted, phoneHash: _hash, name: realName, ...rest } = profile;
   return NextResponse.json({
     profile: {
       ...rest,
+      name: isMine || matched ? realName : profile.nickname,
       phone,
       photos: photosVisible
         ? profile.photos.map((p) => ({ id: p.id, url: p.url, isMain: p.isMain }))
@@ -135,8 +137,9 @@ export async function PATCH(
   }
 
   // 전체 항목 수정 (본인 프로필 / 지인 프로필 공용)
+  // 이름·연락처는 최초 등록 후 변경 불가 — 스키마에서 제외 (도용 방지)
   if (body.action === "update") {
-    const parsed = profileFieldsSchema.safeParse(body.fields);
+    const parsed = profileUpdateSchema.safeParse(body.fields);
     if (!parsed.success) {
       return NextResponse.json({ error: "입력값을 확인해 주세요" }, { status: 400 });
     }
@@ -148,13 +151,10 @@ export async function PATCH(
     await prisma.profile.update({
       where: { id },
       data: {
-        name: d.name.trim(),
         gender: d.gender,
         birthYear: d.birthYear,
         heightCm: d.heightCm,
         bodyType: d.bodyType,
-        phone: encryptPhone(d.phone.replace(/-/g, "")),
-        phoneHash: hashPhone(d.phone),
         avoidSameCompany: d.avoidSameCompany ?? profile.avoidSameCompany,
         areaSido: d.areaSido,
         areaGugun: d.areaGugun,

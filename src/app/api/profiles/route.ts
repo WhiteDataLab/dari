@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { encryptPhone, hashPhone } from "@/lib/crypto";
 import { profileCreateSchema, checkProfileFreeText } from "@/lib/profileInput";
+import { generateNickname } from "@/lib/nickname";
 
 // POST /api/profiles — 본인 or 지인 프로필 생성
 export async function POST(req: Request) {
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
       consentNotifiedAt: d.isSelf ? null : new Date(), // TODO(phase-2): 당사자 SMS 통지
       delegatePhotoConsent: !!d.delegatePhotoConsent,
       name: d.name.trim(),
+      nickname: generateNickname(),
       gender: d.gender,
       birthYear: d.birthYear,
       heightCm: d.heightCm,

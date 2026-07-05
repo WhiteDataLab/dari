@@ -189,7 +189,7 @@ async function degreeBetween(
     relationToOwner: import("@prisma/client").RelationType;
     isSelf: boolean;
     userId: string | null;
-    name: string;
+    nickname: string;
   },
 ): Promise<number | null> {
   try {

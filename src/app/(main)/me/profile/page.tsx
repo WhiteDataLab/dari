@@ -52,6 +52,10 @@ export default async function MyProfilePage() {
         <p className="mt-0.5 text-sm text-sub">
           {profile.areaSido} {profile.areaGugun} · {profile.jobTitle}
         </p>
+        <p className="mt-1 text-xs font-semibold text-sub">
+          🎭 다른 회원에게는 <b className="text-ink">{profile.nickname}</b>(으)로 보여요 — 실명·연락처는
+          성사되면 공개돼요
+        </p>
         {isClaimed && (
           <p className="mt-1.5 text-xs font-semibold text-thread">
             🔗 {profile.owner.name}님이 등록해준 프로필이에요

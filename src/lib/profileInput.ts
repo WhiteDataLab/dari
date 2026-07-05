@@ -42,10 +42,14 @@ export const profileCreateSchema = profileFieldsSchema.extend({
   delegatePhotoConsent: z.boolean().optional(),
 });
 
+// 수정용 — 이름·연락처는 최초 등록 후 변경 불가 (도용 방지, PROJECT_SPEC §7.5)
+export const profileUpdateSchema = profileFieldsSchema.omit({ name: true, phone: true });
+
 export type ProfileFields = z.infer<typeof profileFieldsSchema>;
+export type ProfileUpdateFields = z.infer<typeof profileUpdateSchema>;
 
 // 자유 텍스트 연락처 우회 감지 — 위반 필드가 있으면 에러 메시지 반환
-export function checkProfileFreeText(d: ProfileFields): string | null {
+export function checkProfileFreeText(d: ProfileUpdateFields): string | null {
   for (const [field, value] of [
     ["이상형", d.idealType],
     ["연애관", d.loveView],

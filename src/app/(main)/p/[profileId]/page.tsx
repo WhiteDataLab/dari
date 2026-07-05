@@ -75,6 +75,8 @@ export default async function ProfileDetailPage({
   const photosVisible = await canViewPhotos(userId, profile);
   const path = await computeRelationPath(userId, profile).catch(() => null);
   const age = new Date().getFullYear() - profile.birthYear + 1;
+  // 실명은 내 프로필이거나 성사된 사이일 때만 (PROJECT_SPEC §7.6)
+  const displayName = isMine || mode === "matched" ? profile.name : profile.nickname;
 
   const infoRows: [string, string][] = [
     ["체형", BODY_LABEL[profile.bodyType] ?? profile.bodyType],
@@ -137,8 +139,18 @@ export default async function ProfileDetailPage({
 
       <div className="px-6 pt-4">
         <h1 className="text-[26px] font-extrabold tracking-tight">
-          {profile.name}, {age}
+          {displayName}, {age}
         </h1>
+        {!isMine && mode !== "matched" && (
+          <p className="mt-0.5 text-xs font-semibold text-sub">
+            🔒 실명과 연락처는 매칭이 성사되면 공개돼요
+          </p>
+        )}
+        {isMine && (
+          <p className="mt-0.5 text-xs font-semibold text-sub">
+            🎭 다른 회원에게는 <b className="text-ink">{profile.nickname}</b>(으)로 보여요
+          </p>
+        )}
         <p className="mt-0.5 text-sm text-sub">
           {profile.heightCm}cm · {profile.areaSido} {profile.areaGugun}
         </p>

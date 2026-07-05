@@ -92,7 +92,7 @@ export default async function LikesPage({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-extrabold">
-                      {p.name}, {new Date().getFullYear() - p.birthYear + 1}
+                      {p.nickname}, {new Date().getFullYear() - p.birthYear + 1}
                     </p>
                     <p className="mt-0.5 text-[12.5px] text-sub">
                       {p.jobTitle}
@@ -134,7 +134,8 @@ export default async function LikesPage({
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-extrabold">
-                      {p.name}, {new Date().getFullYear() - p.birthYear + 1}
+                      {like.status === "ACCEPTED" ? p.name : p.nickname},{" "}
+                      {new Date().getFullYear() - p.birthYear + 1}
                     </p>
                     <p className="mt-0.5 text-[12.5px] text-sub">
                       {p.jobTitle}

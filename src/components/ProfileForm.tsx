@@ -149,9 +149,13 @@ export function ProfileForm({
       if (!consent) return "당사자 동의 확인이 필요해요";
     }
     if (stepKey === "기본 정보") {
-      if (!name || !gender || !birthYear || !heightCm || !bodyType || !phone || !areaSido || !areaGugun || !company || !jobTitle)
+      if (!gender || !birthYear || !heightCm || !bodyType || !areaSido || !areaGugun || !company || !jobTitle)
         return "모든 항목을 채워 주세요";
-      if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
+      if (!isEdit) {
+        // 이름·연락처는 최초 등록 시에만 입력 (수정 모드에선 잠금)
+        if (!name || !phone) return "모든 항목을 채워 주세요";
+        if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
+      }
     }
     if (stepKey === "라이프스타일") {
       if (!religion || !drinking || !smoking || isDivorced === null) return "모든 항목을 선택해 주세요";
@@ -172,10 +176,12 @@ export function ProfileForm({
       // 저장 (생성 or 수정) → 사진 단계로
       setLoading(true);
       const fields = {
-        name, gender,
+        // 이름·연락처는 최초 등록 후 변경 불가 — 수정 모드에선 보내지 않음 (서버도 거부)
+        ...(isEdit ? {} : { name, phone }),
+        gender,
         birthYear: Number(birthYear),
         heightCm: Number(heightCm),
-        bodyType, phone, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
+        bodyType, areaSido, areaGugun, company, companyMasked, avoidSameCompany, jobTitle,
         religion, drinking,
         drinkCapacity: drinkCapacity || null,
         smoking,
@@ -254,7 +260,17 @@ export function ProfileForm({
       {stepKey === "기본 정보" && (
         <div>
           <p className={label}>이름</p>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={input} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isEdit}
+            className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}
+          />
+          {isEdit && (
+            <p className="mt-1.5 text-xs text-sub">
+              🔒 이름과 연락처는 도용 방지를 위해 등록 후 바꿀 수 없어요
+            </p>
+          )}
           <p className={label}>성별</p>
           <div className="flex gap-2">
             <Chip selected={gender === "MALE"} onClick={() => setGender("MALE")}>남성</Chip>
@@ -274,7 +290,14 @@ export function ProfileForm({
             ))}
           </div>
           <p className={label}>연락처 <span className="font-medium text-sub">(성사 전까지 비공개)</span></p>
-          <input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" className={input} />
+          <input
+            inputMode="tel"
+            value={isEdit ? phone || "등록된 번호 (변경 불가)" : phone}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={isEdit}
+            placeholder="010-0000-0000"
+            className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}
+          />
           <p className={label}>사는 곳</p>
           <div className="flex gap-2">
             <select value={areaSido} onChange={(e) => setAreaSido(e.target.value)} className={input}>

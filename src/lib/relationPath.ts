@@ -27,7 +27,7 @@ type RawPath = { path: string[]; rels: string[]; depth: number };
 
 export async function computeRelationPath(
   viewerId: string,
-  profile: { ownerId: string; relationToOwner: RelationType; isSelf: boolean; userId: string | null; name: string },
+  profile: { ownerId: string; relationToOwner: RelationType; isSelf: boolean; userId: string | null; nickname: string },
 ): Promise<PathResult | null> {
   // 목표 노드: 본인 프로필이면 당사자, 대리 등록이면 등록자(중매인)
   const targetUserId = profile.isSelf && profile.userId ? profile.userId : profile.ownerId;
@@ -121,7 +121,8 @@ export async function computeRelationPath(
   } else {
     // 대리 등록: 경로는 소유자(중매인)까지 + 마지막 칸 relationToOwner
     sentence = `${parts.join("의 ")}의 ${lastRel}`;
-    nodes.push({ name: profile.name, rel: lastRel! });
+    // 당사자 실명은 성사 전 비공개 — 닉네임으로 표시
+    nodes.push({ name: profile.nickname, rel: lastRel! });
     degree = rows[0].depth + 1;
   }
 

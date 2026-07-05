@@ -98,7 +98,9 @@ export default async function DeckPage() {
                   {new Date().getFullYear() - c.birthYear + 1}
                 </span>
               </p>
-              <p className="mt-0.5 text-xs text-sub">{c.jobTitle}</p>
+              <p className="mt-0.5 text-xs text-sub">
+                {c.jobTitle} · 🎭 {c.nickname}
+              </p>
               {c.claimedAt && (
                 <p className="mt-1 text-[11px] font-bold text-thread">
                   🔗 본인 가입 연동{!c.ownerCanEdit ? " · 열람만 가능" : ""}

@@ -29,11 +29,12 @@ export default async function ProfileEditPage({
   });
   if (!profile || !canEditProfile(userId, profile)) notFound();
 
+  // 연락처는 수정 불가 항목 — 원본 대신 마스킹된 번호만 클라이언트로 전달
   let phone = "";
   try {
-    phone = formatPhone(decryptPhone(profile.phone));
+    phone = formatPhone(decryptPhone(profile.phone)).replace(/-\d{3,4}-/, "-****-");
   } catch {
-    // 키 불일치 등 복호화 실패 → 빈 값으로 두고 재입력 유도
+    // 복호화 실패 시 빈 값 (폼에서 "등록된 번호 (변경 불가)" 표시)
   }
 
   return (

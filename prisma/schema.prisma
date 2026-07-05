@@ -187,7 +187,8 @@ model Profile {
   consentNotifiedAt    DateTime?
   delegatePhotoConsent Boolean   @default(false) // 사진 열람 수락 권한을 중매인에게 위임
 
-  name               String
+  name               String // 실명 — 성사 전에는 본인·등록자 외 비공개, 등록 후 수정 불가 (도용 방지)
+  nickname           String // 랜덤 닉네임 — 성사 전 다른 회원에게 표시 (예: "포근한 수달")
   gender             Gender
   birthYear          Int
   heightCm           Int
