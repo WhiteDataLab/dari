@@ -10,7 +10,7 @@ export default async function MyPage() {
   const session = await auth();
   const user = await prisma.user.findUnique({
     where: { id: session!.user.id },
-    select: { name: true, referralCode: true, allowNameInPath: true },
+    select: { name: true, referralCode: true, allowNameInPath: true, role: true },
   });
   if (!user) return null;
 
@@ -22,6 +22,15 @@ export default async function MyPage() {
       </p>
 
       <InviteCard code={user.referralCode} />
+
+      {user.role === "ADMIN" && (
+        <Link
+          href="/admin"
+          className="mt-4 flex w-full items-center justify-between rounded-[20px] bg-[#1C1B18] px-4.5 py-4 text-[15px] font-extrabold text-white"
+        >
+          🛠 관리자 대시보드 <span className="opacity-60">›</span>
+        </Link>
+      )}
 
       <div className="mt-4 overflow-hidden rounded-[20px] bg-white shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
         <MenuLinks />

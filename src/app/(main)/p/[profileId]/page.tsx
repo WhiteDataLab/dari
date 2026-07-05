@@ -8,6 +8,7 @@ import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { canEditProfile } from "@/lib/profileAccess";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
 import { ShareProfileButton } from "@/components/ShareProfileButton";
+import { ReportButton } from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -249,6 +250,8 @@ export default async function ProfileDetailPage({
           <p className="text-[15px] leading-relaxed">{profile.loveView}</p>
         </section>
       )}
+
+      {!isMine && <ReportButton profileId={profile.id} />}
 
       {mode !== "none" && (
         <LikeCta
