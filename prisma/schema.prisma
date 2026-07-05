@@ -213,6 +213,8 @@ model Profile {
 
   avoidSameCompany Boolean @default(true) // 같은 회사 상호 비노출
 
+  shareToken String? @unique // 비가입자 공유 링크 토큰 (/s/[token]) — 닉네임 기준 공개 페이지
+
   status ProfileStatus @default(ACTIVE)
 
   photos        ProfilePhoto[]

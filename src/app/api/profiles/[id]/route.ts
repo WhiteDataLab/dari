@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
@@ -173,6 +174,25 @@ export async function PATCH(
         recommenderComment: d.recommenderComment || null,
       },
     });
+    return NextResponse.json({ ok: true });
+  }
+
+  // 비가입자 공유 링크 발급 (/s/[token]) — 편집 가능자만, 노출 중 프로필만
+  if (body.action === "share") {
+    if (profile.status !== "ACTIVE") {
+      return NextResponse.json({ error: "노출 중인 프로필만 공유할 수 있어요" }, { status: 400 });
+    }
+    let token = profile.shareToken;
+    if (!token) {
+      token = crypto.randomBytes(16).toString("hex");
+      await prisma.profile.update({ where: { id }, data: { shareToken: token } });
+    }
+    return NextResponse.json({ ok: true, token });
+  }
+
+  // 공유 링크 회수 — 기존 링크 즉시 무효화
+  if (body.action === "unshare") {
+    await prisma.profile.update({ where: { id }, data: { shareToken: null } });
     return NextResponse.json({ ok: true });
   }
 

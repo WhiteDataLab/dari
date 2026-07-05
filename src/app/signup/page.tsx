@@ -28,6 +28,9 @@ export default function SignupPage() {
       .then((r) => r.json())
       .then((d) => setNeedsReferral(d.needsReferral !== false))
       .catch(() => {});
+    // 공유 링크(/s/[token])에서 넘어온 경우 추천코드 자동 입력
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) setReferralCode(code.toUpperCase());
   }, []);
 
   // STEP 1: 이메일 인증

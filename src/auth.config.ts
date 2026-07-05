@@ -25,6 +25,7 @@ export const authConfig = {
       const isPublic =
         publicPaths.includes(pathname) ||
         pathname.startsWith("/signup/") ||
+        pathname.startsWith("/s/") || // 비가입자 공유 프로필
         pathname.startsWith("/api/auth");
       if (isPublic) return true;
       if (pathname.startsWith("/admin")) {

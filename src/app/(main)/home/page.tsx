@@ -98,14 +98,23 @@ export default async function HomePage() {
         모두 누군가의 지인이에요. 몇 다리인지 확인해 보세요.
       </p>
 
-      {profileIncomplete && (
-        <Link
-          href="/me/profile"
-          className="mb-2.5 block rounded-xl bg-blue-tint px-3.5 py-3 text-[13px] font-semibold text-[#2B6CD4]"
-        >
-          ✍️ <b>내 프로필을 완성해 주세요</b> — 사진까지 등록해야 호감을 보낼 수 있어요
-        </Link>
-      )}
+      {profileIncomplete &&
+        (!viewerSelf && hasDeck ? (
+          // 지인 추천만 하는 중매인 — 프로필 없이도 자유롭게 둘러볼 수 있음을 안내
+          <div className="mb-2.5 rounded-xl bg-blue-tint px-3.5 py-3 text-[13px] font-semibold text-[#2B6CD4]">
+            🃏 <b>중매인 모드로 둘러보는 중이에요</b> — 프로필 없이도 구경과 지인 추천은 자유예요.
+            <Link href="/me/profile" className="ml-1 underline">
+              나도 소개팅하려면 프로필 만들기 ›
+            </Link>
+          </div>
+        ) : (
+          <Link
+            href="/me/profile"
+            className="mb-2.5 block rounded-xl bg-blue-tint px-3.5 py-3 text-[13px] font-semibold text-[#2B6CD4]"
+          >
+            ✍️ <b>내 프로필을 완성해 주세요</b> — 사진까지 등록해야 호감을 보낼 수 있어요
+          </Link>
+        ))}
       {!hasDeck && (
         <Link
           href="/deck/new"

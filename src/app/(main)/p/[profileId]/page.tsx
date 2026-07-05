@@ -7,6 +7,7 @@ import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { canEditProfile } from "@/lib/profileAccess";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
+import { ShareProfileButton } from "@/components/ShareProfileButton";
 
 export const dynamic = "force-dynamic";
 
@@ -102,12 +103,17 @@ export default async function ProfileDetailPage({
           ←
         </Link>
         {canEdit && (
-          <Link
-            href={`/p/${profile.id}/edit`}
-            className="flex h-10 items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-sub shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
-          >
-            ✏️ 수정
-          </Link>
+          <span className="flex items-center gap-2">
+            {profile.status === "ACTIVE" && (
+              <ShareProfileButton profileId={profile.id} nickname={profile.nickname} />
+            )}
+            <Link
+              href={`/p/${profile.id}/edit`}
+              className="flex h-10 items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-sub shadow-[0_2px_12px_rgba(28,27,24,0.06)]"
+            >
+              ✏️ 수정
+            </Link>
+          </span>
         )}
       </div>
 
