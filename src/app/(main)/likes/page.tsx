@@ -37,15 +37,24 @@ export default async function LikesPage({
   const [received, sent] = await Promise.all([
     prisma.like.findMany({
       where: { toProfileId: { in: ids }, status: "PENDING" },
-      include: { fromProfile: { include: { photos: { where: { isMain: true }, take: 1 } } } },
+      include: {
+        fromProfile: { include: { photos: { where: { isMain: true }, take: 1 } } },
+        // 내 어느 카드로 온 호감인지 (중매인은 여러 지인을 관리) — §2.8
+        toProfile: { select: { name: true, isSelf: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.like.findMany({
       where: { fromProfileId: { in: ids } },
-      include: { toProfile: true },
+      include: {
+        toProfile: true,
+        fromProfile: { select: { name: true, isSelf: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  const hasMultipleCards = ids.length > 1; // 여러 카드 관리 시에만 "내 카드" 라벨 노출
 
   // 읽음 처리: 호감함 진입 시 알림 소거
   await prisma.notification.updateMany({
@@ -75,8 +84,13 @@ export default async function LikesPage({
           )}
           {received.map((like) => {
             const p = like.fromProfile;
+            const target = like.toProfile;
             return (
               <div key={like.id} className="mb-3 rounded-[20px] bg-white p-4 shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
+                {/* 내 어느 카드로 온 호감인지 명시 (중매인이 여러 지인 관리 시 필수) */}
+                <div className="mb-3 flex items-center gap-1.5 rounded-xl bg-thread-soft px-3 py-2 text-[12.5px] font-bold text-thread">
+                  🎯 {target.isSelf ? "나에게" : `내 지인 ${target.name}에게`} 온 호감이에요
+                </div>
                 <Link href={`/p/${p.id}`} className="flex items-center gap-3">
                   {/* 사진은 교환 수락 전까지 비공개 (§9.0 v1.5) — 성별 색상 카드 뒷면 */}
                   <div
@@ -89,6 +103,7 @@ export default async function LikesPage({
                     🃏
                   </div>
                   <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-sub">보낸 사람</p>
                     <p className="text-base font-extrabold">
                       {p.nickname}, {new Date().getFullYear() - p.birthYear + 1}
                     </p>
@@ -126,8 +141,14 @@ export default async function LikesPage({
             }[like.status];
             return (
               <div key={like.id} className="mb-3 rounded-[20px] bg-white p-4 shadow-[0_2px_12px_rgba(28,27,24,0.06)]">
+                {hasMultipleCards && (
+                  <div className="mb-2.5 flex items-center gap-1.5 rounded-xl bg-blue-tint px-3 py-2 text-[12.5px] font-bold text-[#2B6CD4]">
+                    📮 {like.fromProfile.isSelf ? "내가" : `내 지인 ${like.fromProfile.name}이(가)`} 보낸 호감
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-sub">받는 사람</p>
                     <p className="text-base font-extrabold">
                       {like.status === "ACCEPTED" ? p.name : p.nickname},{" "}
                       {new Date().getFullYear() - p.birthYear + 1}
