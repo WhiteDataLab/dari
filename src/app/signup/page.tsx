@@ -23,14 +23,18 @@ export default function SignupPage() {
 
   // 첫 회원(운영자)은 추천코드 단계를 건너뛴다
   const [needsReferral, setNeedsReferral] = useState(true);
+  const [codeFromUrl, setCodeFromUrl] = useState(false);
   useEffect(() => {
     fetch("/api/signup")
       .then((r) => r.json())
       .then((d) => setNeedsReferral(d.needsReferral !== false))
       .catch(() => {});
-    // 공유 링크(/s/[token])에서 넘어온 경우 추천코드 자동 입력
+    // 초대 링크(?code=)로 넘어온 경우 추천코드 자동 입력 → 타이핑 불필요
     const code = new URLSearchParams(window.location.search).get("code");
-    if (code) setReferralCode(code.toUpperCase());
+    if (code) {
+      setReferralCode(code.toUpperCase());
+      setCodeFromUrl(true);
+    }
   }, []);
 
   // STEP 1: 이메일 인증
@@ -83,6 +87,8 @@ export default function SignupPage() {
       return;
     }
     setStep(needsReferral ? 2 : 3);
+    // 링크로 코드를 받았으면 자동으로 확인 (사용자는 관계만 고르면 됨)
+    if (needsReferral && referralCode) void checkReferral();
   }
 
   async function checkReferral() {
@@ -187,20 +193,34 @@ export default function SignupPage() {
           <h1 className="text-[22px] font-extrabold tracking-tight">
             누가 초대했나요? 🧵
           </h1>
-          <p className="mt-1 text-sm text-sub">기존 회원의 추천코드를 입력해 주세요.</p>
+          <p className="mt-1 text-sm text-sub">
+            {codeFromUrl
+              ? "초대 링크의 추천코드가 자동 입력됐어요."
+              : "기존 회원의 추천코드를 입력해 주세요."}
+          </p>
           <div className="mt-8 space-y-4">
-            <input
-              value={referralCode}
-              onChange={(e) => {
-                setReferralCode(e.target.value.toUpperCase());
-                setReferrerName(null);
-              }}
-              placeholder="DARI-XXXXXX"
-              className={`${input} font-bold tracking-wider uppercase`}
-            />
+            {codeFromUrl && !referrerName && loading ? (
+              <p className="rounded-2xl bg-blue-tint px-4 py-3.5 text-center text-sm font-bold text-[#2B6CD4]">
+                추천코드 확인 중… ⏳
+              </p>
+            ) : (
+              <input
+                value={referralCode}
+                onChange={(e) => {
+                  setReferralCode(e.target.value.toUpperCase());
+                  setReferrerName(null);
+                  setCodeFromUrl(false);
+                }}
+                placeholder="DARI-XXXXXX"
+                readOnly={codeFromUrl && !referrerName}
+                className={`${input} font-bold tracking-wider uppercase ${
+                  codeFromUrl && !referrerName ? "bg-[#F1EDE6]" : ""
+                }`}
+              />
+            )}
             {!referrerName ? (
               <button onClick={checkReferral} disabled={loading || !referralCode} className={btn}>
-                코드 확인
+                {codeFromUrl ? "이 코드로 계속하기" : "코드 확인"}
               </button>
             ) : (
               <>

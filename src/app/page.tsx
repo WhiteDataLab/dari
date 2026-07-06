@@ -2,9 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
-export default async function Landing() {
+export default async function Landing({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
   const session = await auth();
   if (session?.user) redirect("/home");
+
+  // 루트에 ?code로 들어와도 추천코드를 가입 링크로 전달 (타이핑 불필요)
+  const { code } = await searchParams;
+  const signupHref = code ? `/signup?code=${encodeURIComponent(code)}` : "/signup";
 
   return (
     <main className="flex min-h-dvh flex-col justify-between px-6 py-12">
@@ -26,10 +34,10 @@ export default async function Landing() {
 
       <div className="mb-4 space-y-3">
         <Link
-          href="/signup"
+          href={signupHref}
           className="block w-full rounded-2xl bg-blue py-[17px] text-center text-base font-extrabold text-white shadow-[0_6px_16px_rgba(49,130,246,0.3)] active:scale-[0.98]"
         >
-          추천코드로 가입하기
+          {code ? "초대받고 가입하기" : "추천코드로 가입하기"}
         </Link>
         <Link
           href="/login"

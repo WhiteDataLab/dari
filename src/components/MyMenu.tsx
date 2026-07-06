@@ -8,9 +8,11 @@ export function InviteCard({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
   async function share() {
-    const text = `다리 🧵 — 지인의 지인, 어쩌면 인연\n내 추천코드: ${code}\n${window.location.origin}/signup`;
+    // 코드가 자동 입력되는 링크 — 받는 사람은 타이핑 없이 가입 (§2.2)
+    const url = `${window.location.origin}/signup?code=${code}`;
+    const text = `다리 🧵 — 지인의 지인, 어쩌면 인연\n아래 링크로 들어오면 추천코드가 자동 입력돼요\n${url}`;
     if (navigator.share) {
-      await navigator.share({ text }).catch(() => {});
+      await navigator.share({ text, url }).catch(() => {});
     } else {
       await navigator.clipboard.writeText(text).catch(() => {});
       setCopied(true);
