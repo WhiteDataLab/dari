@@ -8,6 +8,7 @@ import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { canEditProfile } from "@/lib/profileAccess";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
 import { ShareProfileButton } from "@/components/ShareProfileButton";
+import { DeleteProfileButton } from "@/components/DeleteProfileButton";
 import { ReportButton } from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function ProfileDetailPage({
   if (!profile) notFound();
 
   const isMine = profile.ownerId === userId || profile.userId === userId;
-  const canEdit = canEditProfile(userId, profile);
+  const canEdit = canEditProfile(userId, profile) || isAdmin; // 관리자는 전체 카드 편집·삭제 (§12.4)
 
   // 숨김 프로필은 본인·등록자·관리자만
   if (profile.status === "HIDDEN" && !isMine && !isAdmin) notFound();
@@ -145,6 +146,7 @@ export default async function ProfileDetailPage({
             >
               ✏️ 수정
             </Link>
+            <DeleteProfileButton profileId={profile.id} isSelf={profile.isSelf} />
           </span>
         )}
       </div>

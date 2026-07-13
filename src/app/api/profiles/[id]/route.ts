@@ -6,7 +6,8 @@ import { canViewPhotos } from "@/lib/photoGate";
 import { computeRelationPath } from "@/lib/relationPath";
 import { getViewerContext, isProfileVisible } from "@/lib/visibility";
 import { decryptPhone, encryptPhone, hashPhone } from "@/lib/crypto";
-import { canEditProfile } from "@/lib/profileAccess";
+import { canEditProfile, canManageProfile } from "@/lib/profileAccess";
+import { deletePhotoByUrl } from "@/lib/storage";
 import { profileUpdateSchema, checkProfileFreeText, PHONE_RE } from "@/lib/profileInput";
 import { notify } from "@/lib/notify";
 
@@ -183,7 +184,8 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
-  if (!canEditProfile(userId, profile)) {
+  // 편집 가능자(당사자/등록자) + 관리자 (§12.4 — 관리자는 전체 카드 편집 가능)
+  if (!(await canManageProfile(userId, profile))) {
     return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
   }
 
@@ -295,4 +297,85 @@ export async function PATCH(
   }
 
   return NextResponse.json({ error: "지원하지 않는 액션이에요" }, { status: 400 });
+}
+
+// DELETE /api/profiles/[id] — 카드 완전 삭제 (§7.11)
+// 잘못 등록했거나 지인이 다른 곳에서 커플이 된 경우 등. 사진(Storage)·호감·열람권·신고까지 함께 제거.
+// 권한: 편집 가능자(당사자/등록자) + 관리자. 성사(Match) 이력이 있으면 일반 회원은 삭제 불가(관리자만).
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const userId = await requireUserId();
+  if (!userId) return NextResponse.json({ error: "로그인이 필요해요" }, { status: 401 });
+
+  const { id } = await params;
+  const profile = await prisma.profile.findUnique({
+    where: { id },
+    include: { photos: true },
+  });
+  if (!profile) {
+    return NextResponse.json({ error: "이미 삭제된 프로필이에요" }, { status: 404 });
+  }
+
+  const viewer = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const isAdmin = viewer?.role === "ADMIN";
+  if (!isAdmin && !canEditProfile(userId, profile)) {
+    return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
+  }
+
+  // 성사 이력 — 상대의 성사 기록 보호를 위해 일반 회원은 삭제 대신 숨기기 안내
+  const matches = await prisma.match.findMany({
+    where: { OR: [{ profileAId: id }, { profileBId: id }] },
+    select: { profileAId: true, profileBId: true },
+  });
+  if (matches.length > 0 && !isAdmin) {
+    return NextResponse.json(
+      { error: "성사 이력이 있는 카드는 삭제할 수 없어요. 숨기기를 이용하거나 관리자에게 문의해 주세요" },
+      { status: 400 },
+    );
+  }
+  const counterpartIds = matches.map((m) => (m.profileAId === id ? m.profileBId : m.profileAId));
+
+  const likes = await prisma.like.findMany({
+    where: { OR: [{ fromProfileId: id }, { toProfileId: id }] },
+    select: { id: true },
+  });
+  const likeIds = likes.map((l) => l.id);
+  const photoUrls = profile.photos.map((p) => p.url);
+
+  await prisma.$transaction([
+    prisma.report.deleteMany({ where: { profileId: id } }),
+    prisma.moderationFlag.deleteMany({ where: { profileId: id } }),
+    prisma.matchProposal.deleteMany({ where: { OR: [{ profileAId: id }, { profileBId: id }] } }),
+    // 관리자 강제 삭제 시에만 도달 — Match 제거 후 상대 프로필은 탐색으로 복귀
+    ...(matches.length > 0
+      ? [
+          prisma.match.deleteMany({ where: { OR: [{ profileAId: id }, { profileBId: id }] } }),
+          prisma.profile.updateMany({
+            where: { id: { in: counterpartIds }, status: "MATCHED" },
+            data: { status: "ACTIVE" },
+          }),
+        ]
+      : []),
+    // 이 카드가 주고받은 호감으로 발급된 열람권까지 함께 회수 (양방향)
+    prisma.photoAccess.deleteMany({
+      where: {
+        OR: [{ profileId: id }, ...(likeIds.length ? [{ likeId: { in: likeIds } }] : [])],
+      },
+    }),
+    prisma.like.deleteMany({ where: { OR: [{ fromProfileId: id }, { toProfileId: id }] } }),
+    prisma.profileView.deleteMany({ where: { profileId: id } }),
+    // payload에 이 프로필을 가리키는 알림 제거 (남겨두면 클릭 시 404)
+    prisma.notification.deleteMany({ where: { payload: { path: ["profileId"], equals: id } } }),
+    prisma.profilePhoto.deleteMany({ where: { profileId: id } }),
+    prisma.profile.delete({ where: { id } }),
+  ]);
+
+  // Storage 사진 삭제 (DB 정리 후 — 실패해도 원본 URL 노출 경로는 이미 제거됨)
+  for (const url of photoUrls) {
+    await deletePhotoByUrl(url).catch(() => {});
+  }
+
+  return NextResponse.json({ ok: true });
 }

@@ -23,6 +23,7 @@ export default async function ProfileEditPage({
 }) {
   const session = await auth();
   const userId = session!.user.id;
+  const isAdmin = (session!.user as { role?: string }).role === "ADMIN"; // 관리자는 전체 카드 편집 (§12.4)
   const { profileId } = await params;
   const { step } = await searchParams;
 
@@ -30,7 +31,7 @@ export default async function ProfileEditPage({
     where: { id: profileId },
     include: { photos: { orderBy: [{ isMain: "desc" }, { sortOrder: "asc" }] } },
   });
-  if (!profile || !canEditProfile(userId, profile)) notFound();
+  if (!profile || !(canEditProfile(userId, profile) || isAdmin)) notFound();
 
   // 연락처는 수정 불가 항목 — 원본 대신 마스킹된 번호만 클라이언트로 전달
   let phone = "";
