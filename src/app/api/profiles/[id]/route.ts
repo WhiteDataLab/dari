@@ -133,10 +133,11 @@ export async function PATCH(
     if (!allowed) {
       const me = await prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, phoneHash: true },
+        select: { name: true, phoneHash: true, role: true },
       });
       allowed =
-        !!me?.phoneHash && me.phoneHash === profile.viaPhoneHash && me.name === profile.viaName;
+        me?.role === "ADMIN" || // 관리자는 전체 카드 편집 가능 (§12.4)
+        (!!me?.phoneHash && me.phoneHash === profile.viaPhoneHash && me.name === profile.viaName);
     }
     if (!allowed) return NextResponse.json({ error: "권한이 없어요" }, { status: 403 });
 

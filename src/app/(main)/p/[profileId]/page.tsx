@@ -9,6 +9,7 @@ import { canEditProfile } from "@/lib/profileAccess";
 import { LikeCta, type CtaMode } from "@/components/LikeCta";
 import { ShareProfileButton } from "@/components/ShareProfileButton";
 import { DeleteProfileButton } from "@/components/DeleteProfileButton";
+import { HideToggle } from "@/components/HideToggle";
 import { ReportButton } from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
@@ -285,6 +286,18 @@ export default async function ProfileDetailPage({
           <h4 className="mb-1.5 text-[13px] font-extrabold tracking-wide text-sub">연애관</h4>
           <p className="text-[15px] leading-relaxed">{profile.loveView}</p>
         </section>
+      )}
+
+      {/* 삭제가 부담스러우면 숨김 — 탐색·호감에서만 제외, 데이터는 유지 (§7.11) */}
+      {canEdit && profile.status !== "MATCHED" && (
+        <div className="mx-5 mt-6">
+          {profile.status === "HIDDEN" && (
+            <p className="mb-2 text-center text-xs font-bold text-sub">
+              🙈 지금 이 카드는 숨김 상태예요 — 탐색에 노출되지 않아요
+            </p>
+          )}
+          <HideToggle profileId={profile.id} hidden={profile.status === "HIDDEN"} />
+        </div>
       )}
 
       {!isMine && <ReportButton profileId={profile.id} />}

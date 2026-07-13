@@ -87,15 +87,19 @@ export function ProfileForm({
   initial,
   initialPhotos = [],
   startAtPhotos = false,
+  identityPending = false,
 }: {
   isSelf: boolean;
   editId?: string;
   initial?: ProfileInitial;
   initialPhotos?: { id: string; url: string }[];
   startAtPhotos?: boolean; // 수정 모드에서 사진 단계로 바로 진입
+  identityPending?: boolean; // 이름·연락처 미입력 카드 — 수정 모드에서 입력 허용 (§7.9)
 }) {
   const router = useRouter();
   const isEdit = !!editId;
+  // 미입력 카드 수정 = 이름·연락처의 "최초 설정"이 아직 안 된 상태 → 잠금 대신 입력 허용
+  const fillMode = isEdit && identityPending;
   const steps =
     isSelf || isEdit
       ? ["기본 정보", "라이프스타일", "어필", "사진"]
@@ -181,6 +185,11 @@ export function ProfileForm({
           if (!name || !phone) return "모든 항목을 채워 주세요";
           if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
         }
+      } else if (fillMode && (name.trim() || phone)) {
+        // 미입력 카드에 이름·연락처를 지금 채우는 경우 — 함께 입력 + 동의 필수 (§7.9)
+        if (!name.trim() || !phone) return "이름과 연락처를 함께 입력해 주세요";
+        if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return "연락처 형식을 확인해 주세요";
+        if (!consent) return "당사자 등록 동의 확인이 필요해요";
       }
     }
     if (stepKey === "라이프스타일") {
@@ -201,6 +210,30 @@ export function ProfileForm({
     if (stepKey === "어필") {
       // 저장 (생성 or 수정) → 사진 단계로
       setLoading(true);
+
+      // 미입력 카드 — 이름·연락처를 채웠으면 먼저 최초 설정 (fillIdentity, §7.9)
+      if (fillMode && name.trim() && phone) {
+        const fres = await fetch(`/api/profiles/${editId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "fillIdentity",
+            name: name.trim(),
+            phone,
+            consentConfirmed: consent,
+          }),
+        });
+        if (!fres.ok) {
+          const fdata = await fres.json().catch(() => ({}));
+          const already = String(fdata.error ?? "").includes("이미 정보가 입력된");
+          // 이전 시도에서 이미 입력됐다면 계속 진행, 그 외 실패는 중단
+          if (!already) {
+            setLoading(false);
+            return setError(fdata.error ?? "이름·연락처 저장에 실패했어요");
+          }
+        }
+      }
+
       const fields = {
         // 이름·연락처는 최초 등록 후 변경 불가 — 수정 모드에선 보내지 않음 (서버도 거부)
         // pendingMode: 호칭 + (선택) 다리 지인 정보 전송
@@ -337,14 +370,21 @@ export function ProfileForm({
             </>
           ) : (
             <>
+              {fillMode && (
+                <div className="mt-4 rounded-xl bg-yellow-tint px-3.5 py-3 text-[13px] font-semibold text-[#6B5B1E]">
+                  ⏳ 이름·연락처가 아직 미입력이에요. 지금 입력하면 탐색에 공개돼요.
+                  입력 후에는 도용 방지를 위해 바꿀 수 없어요. (입력하지 않고 다른 항목만 수정해도 돼요)
+                </div>
+              )}
               <p className={label}>이름</p>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                disabled={isEdit}
+                disabled={isEdit && !identityPending}
+                placeholder={fillMode ? "당사자 이름" : undefined}
                 className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}
               />
-              {isEdit && (
+              {isEdit && !identityPending && (
                 <p className="mt-1.5 text-xs text-sub">
                   🔒 이름과 연락처는 도용 방지를 위해 등록 후 바꿀 수 없어요
                 </p>
@@ -376,12 +416,23 @@ export function ProfileForm({
               </p>
               <input
                 inputMode="tel"
-                value={isEdit ? phone || "미입력 (변경 불가)" : phone}
+                value={isEdit && !identityPending ? phone || "미입력 (변경 불가)" : phone}
                 onChange={(e) => setPhone(e.target.value)}
-                disabled={isEdit}
+                disabled={isEdit && !identityPending}
                 placeholder="010-0000-0000"
                 className={`${input} disabled:bg-[#F1EDE6] disabled:text-sub`}
               />
+              {fillMode && (
+                <label className="mt-3 flex items-start gap-3 rounded-2xl bg-yellow-tint p-4 text-sm font-semibold text-[#6B5B1E]">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 accent-[#3182F6]"
+                  />
+                  ⚠️ 당사자에게 등록 동의를 받았습니다 (이름·연락처 입력 시 필수)
+                </label>
+              )}
             </>
           )}
           <p className={label}>사는 곳</p>

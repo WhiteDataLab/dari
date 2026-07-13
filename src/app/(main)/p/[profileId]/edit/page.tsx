@@ -45,6 +45,7 @@ export default async function ProfileEditPage({
     <ProfileForm
       isSelf={profile.isSelf}
       editId={profile.id}
+      identityPending={profile.identityPending}
       initial={{
         name: profile.name,
         gender: profile.gender,
